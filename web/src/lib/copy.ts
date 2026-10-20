@@ -63,7 +63,7 @@ export const copy = {
     "For now it works on Android and on a computer with Chrome, where its browser extension fetches your feeds.",
   noEntries: "Nothing here",
   refreshButton: "Refresh",
-  /** Said by the dot on the logo and the menu button when feeds are overdue for a check. */
+  /** Said by the dot on the logo when feeds are overdue for a check. */
   refreshSuggested: "Some feeds are due for a check",
   selectEntry: "Select an article",
   openOriginal: "Open original",
@@ -122,12 +122,14 @@ export const copy = {
   /** Name of the app, beside the logo. */
   appName: "Reader",
   back: "Back",
+  /** Said once an article is pulled far enough past its top or end that letting go closes it. */
+  releaseToClose: "Release to close",
+  /** Said once the list is pulled far enough past its end that letting go refreshes it. */
+  releaseToRefresh: "Release to refresh",
   close: "Close",
   /** Label of the feed list for screen readers. */
   feeds: "Feeds",
-  /** The phone's menu button when feeds are overdue for a check, for screen readers. */
-  feedsWithDue: "Feeds, some are due for a check",
-  /** The view's name in the phone bar, which shows the feeds when tapped, for screen readers. */
+  /** The logo and view's name in the phone bar, which show the feeds when tapped, for screen readers. */
   showFeedsFrom: (view: string): string => `${view}, show feeds`,
   expandSidebar: "Expand sidebar",
   collapseSidebar: "Collapse sidebar",
@@ -208,4 +210,6 @@ export const copy = {
   terms: "Terms",
   /** Link to the contact page. */
   contact: "Contact",
+  /** The sidebar entry that opens the contact page. */
+  contactUs: "Contact us",
 };

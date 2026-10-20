@@ -58,6 +58,107 @@
           }
         ]
       }
+    },
+    {
+      "input": {
+        "file": "images.xml",
+        "feedUrl": "https://pictures.example.com/feed.xml"
+      },
+      "output": {
+        "title": "Picture Desk",
+        "siteUrl": "https://pictures.example.com/",
+        "iconUrl": "",
+        "entries": [
+          {
+            "guid": "wider-content",
+            "title": "Two sizes of one picture",
+            "url": "https://pictures.example.com/wider-content",
+            "published": 0,
+            "author": "",
+            "imageUrl": "https://i.example.com/one-460.jpg",
+            "summary": "",
+            "categories": [],
+            "html": ""
+          },
+          {
+            "guid": "content-before-thumbnail",
+            "title": "A thumbnail and the picture",
+            "url": "https://pictures.example.com/content-before-thumbnail",
+            "published": 0,
+            "author": "",
+            "imageUrl": "https://i.example.com/two.jpg",
+            "summary": "",
+            "categories": [],
+            "html": ""
+          },
+          {
+            "guid": "wider-body",
+            "title": "A small thumbnail and a large body picture",
+            "url": "https://pictures.example.com/wider-body",
+            "published": 0,
+            "author": "",
+            "imageUrl": "https://pictures.example.com/three-1024.jpg",
+            "summary": "",
+            "categories": [],
+            "html": "<p><img width=\"300\" src=\"/three-300.jpg\" srcset=\"/three-300.jpg 300w, /three-1024.jpg 1024w\" sizes=\"(max-width: 300px) 100vw, 300px\"></p>"
+          },
+          {
+            "guid": "density",
+            "title": "A picture offered at twice the density",
+            "url": "https://pictures.example.com/density",
+            "published": 0,
+            "author": "",
+            "imageUrl": "https://pictures.example.com/four@2x.jpg",
+            "summary": "",
+            "categories": [],
+            "html": "<img data-src=\"/lazy.jpg\" src='/four.jpg' srcset='/four@2x.jpg 2x' width=200>"
+          },
+          {
+            "guid": "upgraded-srcset",
+            "title": "Candidates that cannot load are skipped",
+            "url": "https://pictures.example.com/upgraded-srcset",
+            "published": 0,
+            "author": "",
+            "imageUrl": "https://cdn.example.com/five.jpg?w=800&q=80",
+            "summary": "",
+            "categories": [],
+            "html": "<img srcset=\"http://cdn.example.com/five.jpg?w=800&amp;q=80 800w, data:image/png;base64,AAAA 2000w\">"
+          },
+          {
+            "guid": "unknown-width-kept",
+            "title": "A picture of unknown width stays",
+            "url": "https://pictures.example.com/unknown-width-kept",
+            "published": 0,
+            "author": "",
+            "imageUrl": "https://i.example.com/six.jpg",
+            "summary": "",
+            "categories": [],
+            "html": "<img src=\"/six-body.jpg\" width=\"1200\">"
+          },
+          {
+            "guid": "group-thumbnail",
+            "title": "A larger thumbnail in a group",
+            "url": "https://pictures.example.com/group-thumbnail",
+            "published": 0,
+            "author": "",
+            "imageUrl": "https://i.example.com/seven-480.jpg",
+            "summary": "",
+            "categories": [],
+            "html": ""
+          },
+          {
+            "guid": "srcset-only",
+            "title": "A body picture with only a srcset",
+            "url": "https://pictures.example.com/srcset-only",
+            "published": 0,
+            "author": "",
+            "imageUrl": "https://pictures.example.com/eight-1600.jpg",
+            "summary": "",
+            "categories": [],
+            "html": "<img srcset=\"/eight-1600.jpg 1600w, /eight-400.jpg 400w\">"
+          }
+        ]
+      }
     }
   ]
 }

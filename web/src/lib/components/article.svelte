@@ -6,11 +6,24 @@
   import Star from "@lucide/svelte/icons/star";
   import Undo2 from "@lucide/svelte/icons/undo-2";
   import { copy } from "#lib/copy.ts";
-  import { type Axis, articleSwipe, touchAxis } from "#lib/gestures.ts";
+  import {
+    ARTICLE_PULL_DISTANCE,
+    type Axis,
+    articleSwipe,
+    closesByPull,
+    pullProgress,
+    pullStretch,
+    pullTravel,
+    swipesPastEnd,
+    tick,
+    touchAxis,
+  } from "#lib/gestures.ts";
+  import { isNarrow } from "#lib/layout.ts";
   import { logFailure, type Reader } from "#lib/reader.svelte.ts";
   import { mentionsUrl } from "#lib/sanitize.ts";
   import { articleTopics } from "$shared/filter.ts";
   import ChipRows from "./chip-rows.svelte";
+  import PullMarker from "./pull-marker.svelte";
   import TopicChip from "./topic-chip.svelte";
 
   const {
@@ -31,6 +44,8 @@
   const END_RESISTANCE = 0.25;
 
   const entry = $derived(reader.current);
+  // an unread article shows as read while open, since leaving it marks it read
+  const shownRead = $derived(entry ? reader.shownRead(entry) : false);
   const topics = $derived(
     entry ? articleTopics(entry.categories, reader.topicOrder) : [],
   );
@@ -39,6 +54,30 @@
       entry.imageUrl !== "" &&
       !mentionsUrl(reader.body, entry.imageUrl),
   );
+  // the lead picture's own width once loaded, so a small picture is not stretched
+  let leadSize = $state({ address: "", width: 0 });
+  const leadMaxWidth = $derived(
+    leadSize.address !== "" &&
+      leadSize.address === entry?.imageUrl &&
+      leadSize.width > 0
+      ? `${leadSize.width}px`
+      : undefined,
+  );
+
+  function measureLead(image: HTMLImageElement): () => void {
+    function measure(): void {
+      leadSize = {
+        address: image.getAttribute("src") ?? "",
+        width: image.naturalWidth,
+      };
+    }
+    // a cached picture may have loaded before this runs
+    if (image.complete) {
+      measure();
+    }
+    image.addEventListener("load", measure);
+    return () => image.removeEventListener("load", measure);
+  }
   const byline = $derived(
     [
       reader.feeds.find((feed) => feed.id === entry?.feedId)?.title ?? "",
@@ -60,17 +99,45 @@
   let scroller: HTMLDivElement | undefined = $state();
   let startX = 0;
   let startY = 0;
+  // whether the touch began where the page leaves sideways swipes to what is under it
   let ignoreSwipe = false;
+  // whether, on a phone, the touch began alone with the article at its top or its end
+  let startedAtTop = false;
+  let startedAtEnd = false;
   // which way the current touch is going, once it is clear
   let axis: Axis = "none";
   // how far the article is moved sideways, in pixels, and whether it is sliding on its own
   let offset = $state(0);
   let sliding = $state(false);
+  // how far the finger has pulled the article past its top (positive) or end (negative), and how far the article moved
+  let pull = $state(0);
+  // whether the pull is sideways, past the first (positive) or last (negative) article, rather than past the top or end
+  let pullSideways = $state(false);
+  let shift = $state(0);
+  // whether the browser asked for reduced motion when the touch began, so a pull leaves the article in place
+  let still = false;
+  const armed = $derived(Math.abs(pull) >= ARTICLE_PULL_DISTANCE);
+  // how far the pull arrow sits from the edge, centered in the gap the pull opens
+  const pullGap = $derived(`${Math.abs(pullSideways ? offset : shift) / 2}px`);
+  // the arrow points the way of the pull, and turns over once letting go closes the article
+  const pullTurn = $derived(
+    (pullSideways ? -90 : 0) + (pull > 0 === armed ? 180 : 0),
+  );
 
   /** Where the open article sits in the list; -1 when the list no longer holds it. */
   const index = $derived(
     reader.visible.findIndex((row) => row.id === reader.currentId),
   );
+
+  /** Whether the article is scrolled as far up as it goes. */
+  function atTop(box: HTMLElement): boolean {
+    return box.scrollTop <= 0;
+  }
+
+  /** Whether the article is scrolled as far down as it goes. */
+  function atEnd(box: HTMLElement): boolean {
+    return box.scrollTop + box.clientHeight >= box.scrollHeight - 1;
+  }
 
   function reducedMotion(): boolean {
     return globalThis.matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -122,8 +189,29 @@
   async function settle(): Promise<void> {
     sliding = true;
     offset = 0;
+    shift = 0;
     await wait(SLIDE_MS);
     sliding = false;
+  }
+
+  /**
+   * Slide the pulled article on off the screen the way it was pulled
+   * (`direction` 1 for down), then close it, unless it changed or closed
+   * meanwhile.
+   */
+  async function pullOff(direction: number): Promise<void> {
+    const startId = reader.currentId;
+    pull = 0;
+    if (!still) {
+      sliding = true;
+      shift = direction * (scroller?.clientHeight ?? globalThis.innerHeight);
+      await wait(SLIDE_MS);
+      sliding = false;
+    }
+    if (reader.currentId === startId) {
+      onback();
+    }
+    shift = 0;
   }
 
   $effect(() => {
@@ -164,36 +252,111 @@
       ignoreSwipe =
         target instanceof Element &&
         target.closest("pre, .table-scroll, code, [data-scrolls]") !== null;
+      // a second finger, as in a pinch, or the wide layout never pulls the article closed
+      const pulls = event.touches.length === 1 && isNarrow();
+      startedAtTop = pulls && scroller !== undefined && atTop(scroller);
+      startedAtEnd = pulls && scroller !== undefined && atEnd(scroller);
+      still = reducedMotion();
     }
   }
 
-  /** The article follows a sideways finger, with resistance when the list no longer holds it. */
+  /** Move the article with a finger `down` pixels from where it began, when that pulls it past its edge. */
+  function followPull(event: TouchEvent, down: number): void {
+    if (event.touches.length > 1) {
+      startedAtTop = false;
+      startedAtEnd = false;
+    }
+    pull =
+      axis === "sideways" ? 0 : pullTravel(down, startedAtTop, startedAtEnd);
+    shift = still ? 0 : pullStretch(pull);
+    // the article moves instead of the browser's own overscroll, which would start on this first move
+    if (pull !== 0 && event.cancelable) {
+      event.preventDefault();
+    }
+  }
+
+  /**
+   * Move the article with a finger `across` pixels from where it began: with
+   * resistance when the list no longer holds it, and past the first or last
+   * article as a pull, less and less the further it goes.
+   */
+  function followSwipe(across: number): void {
+    if (index === -1) {
+      offset = across * END_RESISTANCE;
+    } else if (swipesPastEnd(across, index, reader.visible.length)) {
+      pull = across;
+      offset = still ? 0 : pullStretch(across);
+    } else {
+      offset = across;
+    }
+  }
+
+  /**
+   * The article follows a sideways finger, and, pulled on past the edge the
+   * touch began at, follows it up or down less and less the further it goes;
+   * a pull that crosses the point where letting go closes the article ticks.
+   */
   function onMove(event: TouchEvent): void {
     const [touch] = event.touches;
-    if (touch && !ignoreSwipe && !sliding) {
+    if (touch && !sliding) {
       const across = touch.clientX - startX;
       const down = touch.clientY - startY;
       if (axis === "none") {
         axis = touchAxis(across, down);
       }
-      if (axis === "sideways") {
-        offset = index === -1 ? across * END_RESISTANCE : across;
+      const wasArmed = armed;
+      followPull(event, down);
+      pullSideways = axis === "sideways";
+      if (axis === "sideways" && !ignoreSwipe) {
+        followSwipe(across);
+      }
+      if (armed !== wasArmed) {
+        tick();
       }
     }
   }
 
+  // Svelte's touchmove handlers are passive, so they could not stop the browser's overscroll.
+  function listenMoves(box: HTMLElement): () => void {
+    box.addEventListener("touchmove", onMove, { passive: false });
+    return () => box.removeEventListener("touchmove", onMove);
+  }
+
+  /**
+   * A sideways swipe steps or closes; on a phone, pulling the article well
+   * past the top or end it was already at when the touch began closes it, as
+   * Back does.
+   */
   function onEnd(event: TouchEvent): void {
     const [touch] = event.changedTouches;
-    if (touch && axis === "sideways") {
+    if (
+      touch &&
+      event.type === "touchend" &&
+      axis === "vertical" &&
+      scroller !== undefined &&
+      closesByPull(
+        touch.clientY - startY,
+        startedAtTop && atTop(scroller),
+        startedAtEnd && atEnd(scroller),
+      )
+    ) {
+      logFailure(pullOff(Math.sign(touch.clientY - startY)));
+    } else if (touch && axis === "sideways" && !ignoreSwipe) {
       const across = touch.clientX - startX;
       const outcome = articleSwipe(across, index, reader.visible.length);
+      pull = 0;
       if (outcome === "stay") {
         logFailure(settle());
       } else {
         logFailure(slideTo(across < 0 ? 1 : -1, outcome === "close"));
       }
+    } else if (pull !== 0 || shift !== 0) {
+      pull = 0;
+      logFailure(settle());
     }
     axis = "none";
+    startedAtTop = false;
+    startedAtEnd = false;
   }
 </script>
 
@@ -224,10 +387,10 @@
       <button
         type="button"
         class="grid size-12 place-items-center rounded-md text-muted"
-        aria-label={entry.read ? copy.markUnread : copy.markRead}
+        aria-label={shownRead ? copy.markUnread : copy.markRead}
         onclick={() => logFailure(reader.toggleRead())}
       >
-        {#if entry.read}
+        {#if shownRead}
           <Undo2 class="size-5" />
         {:else}
           <Check class="size-5" />
@@ -259,7 +422,7 @@
     bind:this={scroller}
     role="presentation"
     ontouchstart={onStart}
-    ontouchmove={onMove}
+    {@attach listenMoves}
     ontouchend={onEnd}
     ontouchcancel={onEnd}
   >
@@ -268,7 +431,9 @@
         class="mx-auto flex max-w-[44rem] flex-col gap-5 {sliding
           ? "transition-transform duration-200 ease-out"
           : ""}"
-        style:transform={offset === 0 ? undefined : `translateX(${offset}px)`}
+        style:transform={offset === 0 && shift === 0
+          ? undefined
+          : `translate(${offset}px, ${shift}px)`}
       >
         <div class="flex flex-col gap-3">
           <h1
@@ -304,11 +469,11 @@
               <button
                 type="button"
                 class="grid size-8 place-items-center rounded-md text-muted hover:bg-side hover:text-ink"
-                aria-label={entry.read ? copy.markUnread : copy.markRead}
-                title={entry.read ? copy.markUnread : copy.markRead}
+                aria-label={shownRead ? copy.markUnread : copy.markRead}
+                title={shownRead ? copy.markUnread : copy.markRead}
                 onclick={() => logFailure(reader.toggleRead())}
               >
-                {#if entry.read}
+                {#if shownRead}
                   <Undo2 class="size-4" />
                 {:else}
                   <Check class="size-4" />
@@ -323,6 +488,8 @@
             alt=""
             referrerpolicy="no-referrer"
             class="max-h-96 w-full rounded-lg object-cover"
+            style:max-width={leadMaxWidth}
+            {@attach measureLead}
           >
         {/if}
         <div class="prose max-w-none font-reading prose-img:rounded">
@@ -376,4 +543,26 @@
       </div>
     {/if}
   </div>
+  {#if pull !== 0}
+    <!-- centered in the gap the pull opens; it turns over once letting go closes the article -->
+    <div
+      class="pointer-events-none absolute flex items-center justify-center {pullSideways
+        ? "top-0 bottom-[calc(4rem+env(safe-area-inset-bottom))] md:bottom-0"
+        : "inset-x-0"}"
+      style:top={!pullSideways && pull > 0 ? pullGap : undefined}
+      style:bottom={!pullSideways && pull < 0
+        ? `calc(4rem + env(safe-area-inset-bottom) + ${pullGap})`
+        : undefined}
+      style:left={pullSideways && pull > 0 ? pullGap : undefined}
+      style:right={pullSideways && pull < 0 ? pullGap : undefined}
+      aria-hidden="true"
+    >
+      <PullMarker
+        {armed}
+        turn={pullTurn}
+        style={`opacity: ${pullProgress(pull)}; transform: scale(${0.6 + 0.4 * pullProgress(pull)})`}
+      />
+    </div>
+  {/if}
+  <p class="sr-only" aria-live="polite">{armed ? copy.releaseToClose : ""}</p>
 </article>

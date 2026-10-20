@@ -3,11 +3,10 @@ package cc.hafa.reader.ui
 import android.content.ActivityNotFoundException
 import android.content.Context
 import android.content.Intent
-import androidx.compose.animation.core.animate
-import androidx.compose.animation.core.spring
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.Orientation
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -47,32 +46,30 @@ import androidx.compose.material3.BottomAppBarDefaults
 import androidx.compose.material3.BottomAppBarScrollBehavior
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
 import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
-import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.ui.input.nestedscroll.nestedScroll
-import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.LinkAnnotation
 import androidx.compose.ui.text.SpanStyle
@@ -85,7 +82,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.fromHtml
 import androidx.compose.ui.text.style.LineBreak
 import androidx.compose.ui.text.withLink
-import androidx.compose.ui.unit.Velocity
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import cc.hafa.reader.R
@@ -96,7 +92,6 @@ import cc.hafa.reader.core.decodeHtmlEntities
 import cc.hafa.reader.core.showsLeadImage
 import cc.hafa.reader.core.topicOff
 import coil3.SingletonImageLoader
-import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.awaitCancellation
@@ -107,15 +102,11 @@ import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.Locale
-import kotlin.math.abs
-import kotlin.math.sign
 
 private val ARTICLE_WIDTH = 680.dp
 private val ARTICLE_MARGIN = 20.dp
 // room between articles while one slides over the next
 private val PAGE_GAP = 16.dp
-// How far past the first or last article a drag must go to close it, as on the web (90 CSS pixels).
-private val CLOSE_DRAG = 90.dp
 
 private fun isWebLink(link: String): Boolean = link.startsWith("https://")
 
@@ -140,12 +131,19 @@ fun articleDate(published: Long, zone: ZoneId = ZoneId.systemDefault(), locale: 
 
 /**
  * The open article: its details, actions and body. Swiping sideways slides to
- * the next or previous article in the list's order, which then counts as opened.
+ * the next or previous article in the list's order, which then counts as opened;
+ * pulling well past the top or end, starting there, or sideways past the
+ * first or last article, closes it: the article follows the pull less and
+ * less the further it goes, and an arrow in the gap turns over, with a tick
+ * each time the pull crosses the point where letting go would close it. Closing goes
+ * through [onClose] with which way a drag sent the article (a unit step), or
+ * zero for Back; while [leaving], it is on its way out and closes nothing.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ArticleScreen(snapshot: Snapshot, viewModel: ReaderViewModel) {
+fun ArticleScreen(snapshot: Snapshot, viewModel: ReaderViewModel, leaving: Boolean, onClose: (Offset) -> Unit) {
     val (state, view) = snapshot
+    val close by rememberUpdatedState(onClose)
     val entry = view.current
     val colors = ReaderTheme.colors
     // The screen can open before the list knows its article, so only an article that was shown and then went (removed by sync) leaves it.
@@ -153,9 +151,9 @@ fun ArticleScreen(snapshot: Snapshot, viewModel: ReaderViewModel) {
     if (entry != null) {
         shown = true
     }
-    LaunchedEffect(entry == null && shown) {
-        if (entry == null && shown) {
-            viewModel.back()
+    LaunchedEffect(entry == null && shown && !leaving) {
+        if (entry == null && shown && !leaving) {
+            close(Offset.Zero)
         }
     }
     val context = LocalContext.current
@@ -169,29 +167,38 @@ fun ArticleScreen(snapshot: Snapshot, viewModel: ReaderViewModel) {
         }
     }
     val scrollBehavior = BottomAppBarDefaults.exitAlwaysScrollBehavior()
-    ReaderScaffold(
-        bottomBar = {
-            ReaderBottomBar(scrollBehavior) {
-                BackButton(viewModel::back)
-                Spacer(Modifier.weight(1f))
-                if (entry != null) {
-                    ArticleBarActions(entry, viewModel)
+    val pull = rememberEdgeDrag(Orientation.Vertical, fromEdgeOnly = true) { towards -> close(towards) }
+    val sideways = rememberEdgeDrag(Orientation.Horizontal, fromEdgeOnly = false) { towards -> close(towards) }
+    // Outside the bar's own handling, so a pull past the end does not count as scrolling that hides the bar.
+    Box(Modifier.fillMaxSize().nestedScroll(pull)) {
+        ReaderScaffold(
+            bottomBar = {
+                ReaderBottomBar(scrollBehavior) {
+                    BackButton { close(Offset.Zero) }
+                    Spacer(Modifier.weight(1f))
+                    if (entry != null) {
+                        ArticleBarActions(entry, state.shownRead(entry), viewModel)
+                    }
                 }
-            }
-        },
-        scrollBehavior = scrollBehavior,
-    ) { padding ->
-        if (entry != null) {
-            val rows = view.visible
-            val index = rows.indexOfFirst { row -> row.id == entry.id }
-            val pageModifier = Modifier
-                .fillMaxSize()
-                .padding(top = padding.calculateTopPadding())
-            if (index == -1) {
-                // An article the list no longer holds, such as one a filter just hid, stays open on its own.
-                ArticlePage(entry, snapshot, viewModel, padding, scrollBehavior, pageModifier)
-            } else {
-                ArticlePager(rows, index, snapshot, viewModel, padding, scrollBehavior, pageModifier)
+            },
+            scrollBehavior = scrollBehavior,
+        ) { padding ->
+            if (entry != null) {
+                val rows = view.visible
+                val index = rows.indexOfFirst { row -> row.id == entry.id }
+                val pageModifier = Modifier
+                    .fillMaxSize()
+                    .padding(top = padding.calculateTopPadding())
+                    .graphicsLayer { translationY = pull.offset }
+                if (index == -1) {
+                    // An article the list no longer holds, such as one a filter just hid, stays open on its own.
+                    ArticlePage(entry, snapshot, viewModel, padding, scrollBehavior, pageModifier)
+                } else {
+                    ArticlePager(rows, index, snapshot, viewModel, padding, scrollBehavior, sideways, pageModifier)
+                }
+                val release = stringResource(R.string.release_to_close)
+                PullIndicator(pull, padding, release)
+                PullIndicator(sideways, padding, release)
             }
         }
     }
@@ -199,10 +206,9 @@ fun ArticleScreen(snapshot: Snapshot, viewModel: ReaderViewModel) {
 
 /**
  * The list's articles side by side, on the one at [index]; settling on another
- * opens it. Dragging on past the first or last article moves it with the
- * finger, and far enough closes it, as stepping past either end does. The
- * bottom bar comes back whenever the page changes, so an article too short to
- * scroll never leaves it hidden.
+ * opens it. Dragging on past the first or last article is [sideways], which
+ * moves it and far enough closes it, as stepping past either end does. The bottom bar comes back whenever the page changes, so an article
+ * too short to scroll never leaves it hidden.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -213,6 +219,7 @@ private fun ArticlePager(
     viewModel: ReaderViewModel,
     padding: PaddingValues,
     scrollBehavior: BottomAppBarScrollBehavior,
+    sideways: EdgeDrag,
     modifier: Modifier,
 ) {
     val pagerState = rememberPagerState(initialPage = index) { rows.size }
@@ -227,8 +234,6 @@ private fun ArticlePager(
             previous = page
         }
     }
-    val threshold = with(LocalDensity.current) { CLOSE_DRAG.toPx() }
-    val edgeDrag = remember(viewModel, threshold) { EdgeDrag(threshold, viewModel::back) }
     LaunchedEffect(pagerState, scrollBehavior) {
         snapshotFlow { pagerState.currentPage }.drop(1).collectLatest { scrollBehavior.showBar() }
     }
@@ -241,20 +246,23 @@ private fun ArticlePager(
     HorizontalPager(
         state = pagerState,
         modifier = modifier
-            .onSizeChanged { size -> edgeDrag.width = size.width.toFloat() }
-            .nestedScroll(edgeDrag)
-            .graphicsLayer { translationX = edgeDrag.offset },
+            .nestedScroll(sideways)
+            .graphicsLayer { translationX = sideways.offset },
         pageSpacing = PAGE_GAP,
         key = { page -> rows[page].id },
     ) { page ->
-        ArticlePage(rows[page], snapshot, viewModel, padding, scrollBehavior.takeIf { page == pagerState.currentPage }, Modifier.fillMaxSize())
+        // Fading as it slides, so the article coming in reads as taking the place of the one going out.
+        val pageModifier = Modifier
+            .fillMaxSize()
+            .graphicsLayer { alpha = pageAlpha(pagerState.getOffsetDistanceInPages(page)) }
+        ArticlePage(rows[page], snapshot, viewModel, padding, scrollBehavior.takeIf { page == pagerState.currentPage }, pageModifier)
     }
 }
 
 /**
  * One article's details, actions and body; the body shows once it is the open
  * article and has loaded. On the page in view, [scrollBehavior] is the bottom
- * bar's, kept shown while the article is too short to scroll.
+ * bar's, kept shown while the article is at its top or end.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -271,13 +279,18 @@ private fun ArticlePage(
     // A neighbor's body is ready before it is opened, so swiping onto it shows it at once.
     val shownBody = if (state.bodyId == entry.id) state.body else state.aheadBodies[entry.id]
     if (scrollBehavior != null) {
+        // At the top or the end, including an article too short to scroll, the bar slides back and stays shown.
         LaunchedEffect(listState, scrollBehavior) {
-            snapshotFlow { !(listState.canScrollForward || listState.canScrollBackward) && scrollBehavior.state.heightOffset != 0f }
-                .collect { stuck ->
-                    if (stuck) {
-                        scrollBehavior.state.heightOffset = 0f
+            snapshotFlow { !(listState.canScrollForward && listState.canScrollBackward) }.collectLatest { atEdge ->
+                if (atEdge) {
+                    // Again whenever the bar's own settling after a fling moves it off.
+                    snapshotFlow { scrollBehavior.state.heightOffset != 0f }.collect { hidden ->
+                        if (hidden) {
+                            scrollBehavior.showBar()
+                        }
                     }
                 }
+            }
         }
     }
     val colors = ReaderTheme.colors
@@ -343,7 +356,7 @@ private fun ArticlePage(
             }
             if (showImage) {
                 item(key = "image") {
-                    AsyncImage(
+                    NaturalSizeImage(
                         model = decodeHtmlEntities(entry.imageUrl),
                         contentDescription = null,
                         contentScale = ContentScale.Crop,
@@ -378,56 +391,9 @@ private fun ArticlePage(
     }
 }
 
-/**
- * The drag past the first or last page, which the pager leaves unused: the
- * pages follow it, and on release one of at least [threshold] pixels slides
- * them off and calls [onClose], while a shorter one springs back.
- */
-private class EdgeDrag(private val threshold: Float, private val onClose: () -> Unit) : NestedScrollConnection {
-    /** How far the pages are moved past the edge, in pixels. */
-    var offset by mutableFloatStateOf(0f)
-        private set
-
-    /** The pager's width, which a closing slide covers. */
-    var width = 0f
-
-    override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
-        // Dragging back toward the pages first undoes the distance past the edge.
-        return if (source == NestedScrollSource.UserInput && offset != 0f && sign(available.x) != sign(offset)) {
-            val taken = if (abs(available.x) >= abs(offset)) -offset else available.x
-            offset += taken
-            Offset(taken, 0f)
-        } else {
-            Offset.Zero
-        }
-    }
-
-    override fun onPostScroll(consumed: Offset, available: Offset, source: NestedScrollSource): Offset {
-        return if (source == NestedScrollSource.UserInput && available.x != 0f) {
-            offset += available.x
-            Offset(available.x, 0f)
-        } else {
-            Offset.Zero
-        }
-    }
-
-    override suspend fun onPreFling(available: Velocity): Velocity {
-        return if (offset == 0f) {
-            Velocity.Zero
-        } else if (abs(offset) >= threshold) {
-            animate(offset, sign(offset) * maxOf(width, abs(offset))) { value, _ -> offset = value }
-            onClose()
-            available
-        } else {
-            animate(offset, 0f, animationSpec = spring()) { value, _ -> offset = value }
-            available
-        }
-    }
-}
-
-/** Star, read, share and open the original, for the bottom bar. */
+/** Star, read, share and open the original, for the bottom bar; [read] is the read mark the article shows. */
 @Composable
-private fun RowScope.ArticleBarActions(entry: Entry, viewModel: ReaderViewModel) {
+private fun RowScope.ArticleBarActions(entry: Entry, read: Boolean, viewModel: ReaderViewModel) {
     val colors = ReaderTheme.colors
     val context = LocalContext.current
     val uriHandler = LocalUriHandler.current
@@ -439,8 +405,8 @@ private fun RowScope.ArticleBarActions(entry: Entry, viewModel: ReaderViewModel)
         pressed = entry.starred,
     )
     IconAction(
-        if (entry.read) Icons.AutoMirrored.Outlined.Undo else Icons.Outlined.Check,
-        stringResource(if (entry.read) R.string.mark_unread else R.string.mark_read),
+        if (read) Icons.AutoMirrored.Outlined.Undo else Icons.Outlined.Check,
+        stringResource(if (read) R.string.mark_unread else R.string.mark_read),
         viewModel.model::toggleRead,
     )
     if (entry.url.isNotEmpty()) {
@@ -501,10 +467,12 @@ private fun BodyBlock(block: HtmlBlock) {
             fontSize = 13.sp,
             softWrap = false,
         )
-        is HtmlBlock.Image -> AsyncImage(
+        is HtmlBlock.Image -> NaturalSizeImage(
             model = block.source,
             contentDescription = block.alt.ifEmpty { null },
             contentScale = ContentScale.FillWidth,
+            declaredWidth = block.declaredWidth,
+            density = block.density,
             modifier = Modifier
                 .fillMaxWidth()
                 .clip(RoundedCornerShape(4.dp))

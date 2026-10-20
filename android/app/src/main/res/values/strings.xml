@@ -58,7 +58,7 @@
     <string name="retention_365">1 year</string>
     <string name="retention_forever">Forever</string>
     <string name="refresh">Refresh</string>
-    <!-- Said by the dot on the logo and the menu button when feeds are overdue for a check. -->
+    <!-- Said by the dot on the logo when feeds are overdue for a check. -->
     <string name="refresh_suggested">Some feeds are due for a check</string>
     <string name="topics_hint">Select a topic to turn it off. Articles with only turned-off topics are hidden.</string>
     <string name="name_label">Name</string>
@@ -75,6 +75,9 @@
     <string name="feeds">Feeds</string>
     <string name="show_feeds">Show feeds</string>
     <string name="back">Back</string>
+    <!-- Said once an article is pulled far enough past its top or end that letting go closes it. -->
+    <string name="release_to_close">Release to close</string>
+    <string name="release_to_refresh">Release to refresh</string>
     <!-- Reasons a feed cannot be read, from the web app and the extension. -->
     <string name="error_no_answer">The site did not answer.</string>
     <string name="error_not_https">Only https addresses can be added.</string>
@@ -116,4 +119,5 @@
     <string name="privacy">Privacy</string>
     <string name="terms">Terms</string>
     <string name="contact">Contact</string>
+    <string name="contact_us">Contact us</string>
 </resources>

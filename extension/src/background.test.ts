@@ -188,6 +188,53 @@ test("checkDue queues nothing for a feed that is not due", async () => {
   expect(page.status[0]?.nextCheck).toBeGreaterThan(Date.now());
 });
 
+test("checkDue for every feed checks the due ones first and answers once they are saved", async () => {
+  const answers: ((response: Response) => void)[] = [];
+  respond = (): Promise<Response> =>
+    new Promise<Response>((resolve) => {
+      answers.push(resolve);
+    });
+  const otherUrl = "https://other.example/rss";
+  await ask({
+    type: "track",
+    feeds: [
+      {
+        id: "checked",
+        url: otherUrl,
+        empty: true,
+        first: {
+          status: 200,
+          url: otherUrl,
+          text: RSS,
+          etag: "",
+          lastModified: "",
+          hint: 0,
+          insecure: false,
+        },
+      },
+      { id: "due", url: FEED_URL, empty: true },
+    ],
+  });
+  let answered = false;
+  const reply = ask({ type: "checkDue", all: true }).then((response) => {
+    answered = true;
+    return response;
+  });
+  await settle();
+  expect(fetched).toEqual([FEED_URL, otherUrl]);
+  expect(answered).toBe(false);
+
+  answers[0]?.(new Response(RSS, { status: 200 }));
+  expect(await reply).toEqual({ type: "queued" });
+  const page = await drained();
+  expect(page.pulled.map((pulled) => pulled.feedId)).toEqual(["due"]);
+  expect(page.checking).toBe(true);
+
+  answers[1]?.(new Response(null, { status: 304 }));
+  await settle();
+  expect((await drained()).checking).toBe(false);
+});
+
 test("a malformed first answer leaves the feed due instead of failing the track", async () => {
   expect(
     await ask({

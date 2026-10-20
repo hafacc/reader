@@ -4,6 +4,20 @@ import { extensionId } from "./config.ts";
 /** Failed pings in a row before the extension counts as gone; a reload or update of it misses a few. */
 const MISSES_BEFORE_GONE = 3;
 
+/**
+ * How long the first look for the extension keeps trying before it counts as
+ * not installed. Chrome may still be loading its extensions when the app
+ * opens, as when it has just started, so the extension can answer a moment late.
+ */
+export const FIRST_LOOK_MS = 3000;
+
+/** Wait between tries of the first look for the extension. */
+export const FIRST_LOOK_RETRY_MS = 500;
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 function isResponse(value: unknown): value is ExtensionResponse {
   return (
     typeof value === "object" &&
@@ -17,6 +31,13 @@ function isResponse(value: unknown): value is ExtensionResponse {
 export class ExtensionClient {
   /** Version of the installed extension; empty when there is none. */
   version = $state("");
+
+  /** How long `find` keeps trying. */
+  lookMs = FIRST_LOOK_MS;
+  /** Wait between tries of `find`. */
+  retryMs = FIRST_LOOK_RETRY_MS;
+  /** Whether the browser can run the extension; outside Chromium browsers it has no `chrome`. */
+  canHaveExtension = typeof chrome !== "undefined";
 
   private readonly id = extensionId;
   private misses = 0;
@@ -60,6 +81,27 @@ export class ExtensionClient {
       if (this.misses >= MISSES_BEFORE_GONE) {
         this.version = "";
       }
+    }
+    return found;
+  }
+
+  /**
+   * Look for the extension as `detect` does, trying again every `retryMs`
+   * for up to `lookMs` while it does not answer, for the first look, when
+   * Chrome may not have loaded it yet. A browser that cannot run it is tried
+   * only once.
+   */
+  async find(): Promise<boolean> {
+    return await this.findBy(
+      this.canHaveExtension ? Date.now() + this.lookMs : 0,
+    );
+  }
+
+  private async findBy(deadline: number): Promise<boolean> {
+    let found = await this.detect();
+    if (!found && Date.now() + this.retryMs <= deadline) {
+      await sleep(this.retryMs);
+      found = await this.findBy(deadline);
     }
     return found;
   }

@@ -2,10 +2,12 @@
   import CircleAlert from "@lucide/svelte/icons/circle-alert";
   import Folder from "@lucide/svelte/icons/folder";
   import Inbox from "@lucide/svelte/icons/inbox";
+  import Mail from "@lucide/svelte/icons/mail";
   import PanelLeftClose from "@lucide/svelte/icons/panel-left-close";
   import PanelLeftOpen from "@lucide/svelte/icons/panel-left-open";
   import Plus from "@lucide/svelte/icons/plus";
   import Star from "@lucide/svelte/icons/star";
+  import { contactUrl } from "#lib/config.ts";
   import { copy } from "#lib/copy.ts";
   import {
     type FeedRow,
@@ -243,9 +245,20 @@
     {/each}
   </div>
 
+  <a
+    href={contactUrl}
+    class="mt-2 flex h-9 shrink-0 items-center gap-2.5 whitespace-nowrap rounded-lg px-2.5 text-sm text-muted hover:bg-panel"
+    title={copy.contactUs}
+  >
+    <span class="flex size-5 shrink-0 items-center justify-center"
+      ><Mail class="size-[18px]" /></span
+    >
+    <span class="truncate {fade}">{copy.contactUs}</span>
+  </a>
+
   <button
     type="button"
-    class="mt-2 flex h-9 shrink-0 items-center gap-2.5 whitespace-nowrap rounded-lg px-2.5 text-sm text-muted hover:bg-panel"
+    class="flex h-9 shrink-0 items-center gap-2.5 whitespace-nowrap rounded-lg px-2.5 text-sm text-muted hover:bg-panel"
     onclick={syncClicked}
     onpointerenter={preloadSync}
     onfocus={preloadSync}

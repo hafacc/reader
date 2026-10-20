@@ -4,8 +4,10 @@ import android.app.Activity
 import android.app.Application
 import android.content.Context
 import android.net.ConnectivityManager
+import android.net.NetworkCapabilities
 import android.os.Bundle
 import android.util.Log
+import cc.hafa.reader.core.DUE_CHECK_MS
 import cc.hafa.reader.core.HttpFeedFetcher
 import cc.hafa.reader.core.ReaderModel
 import cc.hafa.reader.core.ReaderPreferences
@@ -25,7 +27,9 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -52,6 +56,12 @@ class ReaderApplication : Application() {
     // Set once a screen shows, so sync listens to the account; a process started only to check feeds just uploads.
     private val onScreen = AtomicBoolean(false)
 
+    // Activities started and not stopped; touched only on the main thread.
+    private var startedActivities = 0
+
+    // Checks due feeds while a screen shows, as the extension's timer does; null while none shows.
+    private var dueTimer: Job? = null
+
     /** The reader's small choices on this device. */
     val preferences: ReaderPreferences by lazy { SharedReaderPreferences(this) }
 
@@ -67,6 +77,11 @@ class ReaderApplication : Application() {
             savingData = {
                 getSystemService(ConnectivityManager::class.java)?.restrictBackgroundStatus ==
                     ConnectivityManager.RESTRICT_BACKGROUND_STATUS_ENABLED
+            },
+            online = {
+                val connectivity = getSystemService(ConnectivityManager::class.java)
+                connectivity?.getNetworkCapabilities(connectivity.activeNetwork)
+                    ?.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) == true
             },
         )
     }
@@ -130,11 +145,39 @@ class ReaderApplication : Application() {
         override fun onActivityCreated(activity: Activity, savedInstanceState: Bundle?) = Unit
 
         override fun onActivityStarted(activity: Activity) {
-            onScreen.set(true)
+            // Coming back to a running app checks what fell due meanwhile, since Android may have held back the
+            // background worker; the first start leaves that to the checks the screen makes when it opens.
+            val returning = onScreen.getAndSet(true)
             mutableSync.value?.enterForeground()
+            startedActivities += 1
+            if (dueTimer == null) {
+                dueTimer = scope.launch {
+                    if (!returning) {
+                        delay(DUE_CHECK_MS)
+                    }
+                    while (true) {
+                        try {
+                            model.queueDue()
+                        } catch (cancelled: CancellationException) {
+                            throw cancelled
+                        } catch (failure: Exception) {
+                            Log.w("Reader", "checking due feeds failed", failure)
+                        }
+                        delay(DUE_CHECK_MS)
+                    }
+                }
+            }
         }
 
-        override fun onActivityStopped(activity: Activity) = Unit
+        override fun onActivityStopped(activity: Activity) {
+            startedActivities -= 1
+            // A rotation or theme switch stops the activity and starts its replacement at once; the timer runs on.
+            if (startedActivities <= 0 && !activity.isChangingConfigurations) {
+                startedActivities = 0
+                dueTimer?.cancel()
+                dueTimer = null
+            }
+        }
 
         override fun onActivitySaveInstanceState(activity: Activity, outState: Bundle) = Unit
 

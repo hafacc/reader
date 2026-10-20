@@ -2,10 +2,10 @@ package cc.hafa.reader.ui
 
 import android.content.res.Resources
 import androidx.compose.animation.core.animate
+import androidx.compose.animation.core.spring
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.asPaddingValues
@@ -70,7 +70,6 @@ import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
@@ -100,7 +99,8 @@ private const val TOO_MANY_REQUESTS = 429
 /**
  * An icon button labeled for screen readers; a toggle that reads as on or off
  * when [pressed] is given. [dotted] puts a due dot on the icon's corner (see
- * [WithDueDot]) and has screen readers say a refresh is suggested.
+ * [WithDueDot]) and has screen readers say a refresh is suggested. Unless
+ * [enabled], it is dimmed and does nothing, and screen readers say so.
  */
 @Composable
 fun IconAction(
@@ -111,6 +111,7 @@ fun IconAction(
     iconSize: Dp = 24.dp,
     pressed: Boolean? = null,
     dotted: Boolean = false,
+    enabled: Boolean = true,
 ) {
     val suggestion = stringResource(R.string.refresh_suggested)
     val announced = Modifier.semantics {
@@ -119,7 +120,12 @@ fun IconAction(
         }
     }
     if (pressed == null) {
-        IconButton(onClick = onClick, modifier = announced, colors = IconButtonDefaults.iconButtonColors(contentColor = tint)) {
+        IconButton(
+            onClick = onClick,
+            modifier = announced,
+            enabled = enabled,
+            colors = IconButtonDefaults.iconButtonColors(contentColor = tint),
+        ) {
             WithDueDot(dotted) { Icon(icon, contentDescription = label, modifier = Modifier.size(iconSize)) }
         }
     } else {
@@ -127,6 +133,7 @@ fun IconAction(
             checked = pressed,
             onCheckedChange = { onClick() },
             modifier = announced,
+            enabled = enabled,
             colors = IconButtonDefaults.iconToggleButtonColors(contentColor = tint, checkedContentColor = tint),
         ) {
             WithDueDot(dotted) { Icon(icon, contentDescription = label, modifier = Modifier.size(iconSize)) }
@@ -233,10 +240,10 @@ fun Modifier.scrollingScreen(padding: PaddingValues, margin: Dp = 20.dp): Modifi
         .verticalScroll(rememberScrollState())
         .padding(start = margin, top = 24.dp, end = margin, bottom = scrollEndPadding())
 
-/** Slide a hidden bottom bar back into view. */
+/** Slide a hidden bottom bar back into view, as it settles after a scroll. */
 @OptIn(ExperimentalMaterial3Api::class)
 suspend fun BottomAppBarScrollBehavior.showBar() {
-    animate(state.heightOffset, 0f) { value, _ -> state.heightOffset = value }
+    animate(state.heightOffset, 0f, animationSpec = snapAnimationSpec ?: spring()) { value, _ -> state.heightOffset = value }
 }
 
 /** The bottom bar of a form screen: Back and the screen's name, above the keyboard while typing. */
@@ -249,24 +256,12 @@ fun BackBottomBar(title: String, scrollBehavior: BottomAppBarScrollBehavior, onB
     }
 }
 
-/**
- * A screen's name in its bottom bar, taking the room the buttons leave; with
- * [onClick], tapping it does what [clickLabel] says.
- */
+/** A screen's name in its bottom bar, taking the room the buttons leave. */
 @Composable
-fun RowScope.BarTitle(title: String, onClick: (() -> Unit)? = null, clickLabel: String? = null) {
-    val tappable = if (onClick == null) {
-        Modifier
-    } else {
-        Modifier
-            .heightIn(min = 48.dp)
-            .clip(RoundedCornerShape(8.dp))
-            .clickable(onClickLabel = clickLabel, role = Role.Button, onClick = onClick)
-    }
+fun RowScope.BarTitle(title: String) {
     Box(
         Modifier
             .weight(1f)
-            .then(tappable)
             .padding(horizontal = 8.dp),
         contentAlignment = Alignment.CenterStart,
     ) {

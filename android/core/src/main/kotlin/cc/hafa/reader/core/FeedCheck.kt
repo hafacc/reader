@@ -79,7 +79,14 @@ class HttpFeedFetcher(
     private val httpsOnly: Boolean = true,
 ) : FeedFetcher {
     // A redirect between https and plain http comes back unfollowed, to be followed here at https.
-    private val client = client.newBuilder().followSslRedirects(!httpsOnly).build()
+    // Each call's own deadline is its only limit, as the extension's fetch has; OkHttp's default
+    // 10 s connect and read limits would otherwise end a slow site's answer well before it.
+    private val client = client.newBuilder()
+        .followSslRedirects(!httpsOnly)
+        .connectTimeout(0, TimeUnit.MILLISECONDS)
+        .readTimeout(0, TimeUnit.MILLISECONDS)
+        .writeTimeout(0, TimeUnit.MILLISECONDS)
+        .build()
 
     override suspend fun fetch(url: String, etag: String, lastModified: String, timeoutMs: Long): FetchOutcome {
         val address = url.toHttpUrlOrNull()
@@ -227,9 +234,10 @@ fun checkOutcome(schedule: FeedSchedule, url: String, outcome: FetchOutcome, now
         if (hash == schedule.hash) {
             CheckResult(quiet(schedule, now, outcome).copy(etag = outcome.etag, lastModified = outcome.lastModified), null)
         } else {
+            // Any failure to parse counts as an unreadable feed, as on the web, rather than leaving the feed due unseen.
             val parsed = try {
                 parseFeed(outcome.text, outcome.url.ifEmpty { url })
-            } catch (_: NotAFeedException) {
+            } catch (_: Exception) {
                 null
             }
             if (parsed == null) {

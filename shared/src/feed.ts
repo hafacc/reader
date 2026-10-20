@@ -1,5 +1,11 @@
 import { XMLParser } from "fast-xml-parser";
 import { upgradedAddress } from "./address.ts";
+import {
+  type CandidateSize,
+  candidateSize,
+  isLarger,
+  srcsetCandidates,
+} from "./srcset.ts";
 
 /** One article from a feed. */
 export interface FeedEntry {
@@ -221,11 +227,99 @@ function firstDate(node: Node, fields: string[]): number {
   return found;
 }
 
-const IMAGE_PATTERN = /<img\b[^>]*?\bsrc\s*=\s*["'](?<src>[^"']+)["']/iu;
+const IMAGE_TAG = /<img\b[^>]*>/iu;
+// an attribute of an image tag the lead image is chosen from, its value quoted or bare
+const IMAGE_ATTRIBUTE =
+  /[\t\n\f\r ](?<name>srcset|src|width)[\t\n\f\r ]*=[\t\n\f\r ]*(?:"(?<double>[^"]*)"|'(?<single>[^']*)'|(?<bare>[^\t\n\f\r "'>]+))/giu;
+const PIXELS = /^\d+$/u;
 
-function firstImage(html: string, base: string): string {
-  const source = IMAGE_PATTERN.exec(html)?.groups?.src;
-  return source ? upgradedAddress(decodeEntities(source), base) : "";
+/** A picture that could lead an article, with its width in pixels when the feed says (else 0). */
+interface LeadCandidate {
+  address: string;
+  size: CandidateSize;
+}
+
+const NO_CANDIDATE: LeadCandidate = {
+  address: "",
+  size: { width: 0, density: 1 },
+};
+
+function pixels(value: string): number {
+  const trimmed = value.trim();
+  return PIXELS.test(trimmed) ? Number(trimmed) : 0;
+}
+
+/**
+ * The lead picture among candidates in order of preference: the first, given
+ * up for a later one only when both widths are known and the later is wider.
+ */
+function widestLead(candidates: LeadCandidate[]): LeadCandidate {
+  let chosen = NO_CANDIDATE;
+  for (const candidate of candidates) {
+    if (
+      candidate.address !== "" &&
+      (chosen.address === "" ||
+        (chosen.size.width > 0 && candidate.size.width > chosen.size.width))
+    ) {
+      chosen = candidate;
+    }
+  }
+  return chosen;
+}
+
+/** The `src`, `srcset` and `width` of an image tag, by lowercase name, entities decoded; the first of each wins. */
+function imageAttributes(tag: string): Map<string, string> {
+  const attributes = new Map<string, string>();
+  for (const match of tag.matchAll(IMAGE_ATTRIBUTE)) {
+    const name = (match.groups?.["name"] ?? "").toLowerCase();
+    const value =
+      match.groups?.["double"] ??
+      match.groups?.["single"] ??
+      match.groups?.["bare"] ??
+      "";
+    if (!attributes.has(name)) {
+      attributes.set(name, decodeEntities(value));
+    }
+  }
+  return attributes;
+}
+
+/**
+ * The first `img` of article HTML as a lead candidate: the largest of its
+ * `src` and `srcset` candidates (`width` turns densities into widths), the
+ * `src` winning ties.
+ */
+function firstImage(html: string, base: string): LeadCandidate {
+  const attributes = imageAttributes(IMAGE_TAG.exec(html)?.[0] ?? "");
+  const declaredWidth = pixels(attributes.get("width") ?? "");
+  const source = attributes.get("src") ?? "";
+  const resolvedSource = source === "" ? "" : upgradedAddress(source, base);
+  let largest =
+    resolvedSource === ""
+      ? NO_CANDIDATE
+      : { address: resolvedSource, size: candidateSize("", declaredWidth) };
+  for (const { address, descriptors } of srcsetCandidates(
+    attributes.get("srcset") ?? "",
+  )) {
+    const resolved = upgradedAddress(address, base);
+    const size = candidateSize(descriptors, declaredWidth);
+    if (
+      resolved !== "" &&
+      (largest.address === "" || isLarger(size, largest.size))
+    ) {
+      largest = { address: resolved, size };
+    }
+  }
+  return largest;
+}
+
+/** The lead picture: the feed's own unless the body's first picture is known to be wider. */
+function leadImage(
+  feedImages: LeadCandidate[],
+  html: string,
+  base: string,
+): string {
+  return widestLead([...feedImages, firstImage(html, base)]).address;
 }
 
 function atomHref(links: unknown[]): string {
@@ -242,37 +336,49 @@ function mediaGroups(item: Node): Node[] {
   return list(item.group).filter(isNode);
 }
 
-function mediaImage(item: Node, base: string): string {
-  let image = "";
-  for (const thumbnail of list(item.thumbnail).filter(isNode)) {
-    const url = thumbnail["@_url"];
-    if (!image && typeof url === "string") {
-      image = upgradedAddress(url, base);
-    }
-  }
-  for (const content of list(item.content).filter(isNode)) {
-    const url = content["@_url"];
-    const kind = `${content["@_medium"] ?? ""}${content["@_type"] ?? ""}`;
-    if (!image && typeof url === "string" && kind.includes("image")) {
-      image = upgradedAddress(url, base);
-    }
-  }
-  for (const enclosure of list(item.enclosure).filter(isNode)) {
-    const url = enclosure["@_url"];
-    const kind = enclosure["@_type"];
-    if (
-      !image &&
-      typeof url === "string" &&
-      typeof kind === "string" &&
-      kind.startsWith("image/")
-    ) {
-      image = upgradedAddress(url, base);
-    }
-  }
-  for (const group of mediaGroups(item)) {
-    image ||= mediaImage(group, base);
-  }
-  return image;
+/** A Media RSS picture's address and declared width. */
+function mediaCandidate(node: Node, base: string): LeadCandidate {
+  const url = node["@_url"];
+  const width = node["@_width"];
+  return {
+    address: typeof url === "string" ? upgradedAddress(url, base) : "",
+    size: {
+      width: typeof width === "string" ? pixels(width) : 0,
+      density: 1,
+    },
+  };
+}
+
+/**
+ * An item's pictures in order of preference: Media RSS image contents and
+ * image enclosures (the picture itself), then thumbnails, then those of its
+ * Media RSS groups.
+ */
+function mediaImages(item: Node, base: string): LeadCandidate[] {
+  const contents = list(item.content)
+    .filter(isNode)
+    .filter((content) =>
+      `${content["@_medium"] ?? ""}${content["@_type"] ?? ""}`.includes(
+        "image",
+      ),
+    );
+  const enclosures = list(item.enclosure)
+    .filter(isNode)
+    .filter((enclosure) => {
+      const kind = enclosure["@_type"];
+      return typeof kind === "string" && kind.startsWith("image/");
+    });
+  return [
+    ...contents.map((content) => mediaCandidate(content, base)),
+    ...enclosures.map((enclosure) => ({
+      ...mediaCandidate(enclosure, base),
+      size: { width: 0, density: 1 },
+    })),
+    ...list(item.thumbnail)
+      .filter(isNode)
+      .map((thumbnail) => mediaCandidate(thumbnail, base)),
+    ...mediaGroups(item).flatMap((group) => mediaImages(group, base)),
+  ];
 }
 
 /**
@@ -333,7 +439,7 @@ function parseRssItem(item: Node, base: string): FeedEntry {
     url: link,
     published,
     author: displayText(item.creator) || displayText(item.author),
-    imageUrl: mediaImage(item, base) || firstImage(html, base),
+    imageUrl: leadImage(mediaImages(item, base), html, base),
     summary: plainText(text(item.description)) || media.summary,
     categories: categoryNames(list(item.category)),
     html,
@@ -361,7 +467,7 @@ function parseAtomEntry(entry: Node, base: string): FeedEntry {
     url: link,
     published,
     author: author ? displayText(author.name) : "",
-    imageUrl: mediaImage(entry, base) || firstImage(html, base),
+    imageUrl: leadImage(mediaImages(entry, base), html, base),
     summary: plainText(text(entry.summary)) || media.summary,
     categories: categoryNames(list(entry.category)),
     html,
@@ -394,8 +500,16 @@ function parseJsonFeed(source: Node, base: string): ParsedFeed {
       url,
       published,
       author: authors[0] ? text(authors[0].name) : "",
-      imageUrl:
-        upgradedAddress(text(item.image), base) || firstImage(html, base),
+      imageUrl: leadImage(
+        [
+          {
+            address: upgradedAddress(text(item.image), base),
+            size: NO_CANDIDATE.size,
+          },
+        ],
+        html,
+        base,
+      ),
       summary: plainText(text(item.summary)),
       categories: list(item.tags)
         .map((tag) => text(tag))

@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0" xmlns:media="http://search.yahoo.com/mrss/" xmlns:content="http://purl.org/rss/1.0/modules/content/">
+  <channel>
+    <title>Picture Desk</title>
+    <link>https://pictures.example.com/</link>
+    <item>
+      <guid>wider-content</guid>
+      <title>Two sizes of one picture</title>
+      <link>https://pictures.example.com/wider-content</link>
+      <media:content url="https://i.example.com/one-140.jpg" medium="image" width="140"/>
+      <media:content url="https://i.example.com/one-460.jpg" medium="image" width="460"/>
+    </item>
+    <item>
+      <guid>content-before-thumbnail</guid>
+      <title>A thumbnail and the picture</title>
+      <link>https://pictures.example.com/content-before-thumbnail</link>
+      <media:thumbnail url="https://i.example.com/two-thumb.jpg" width="150" height="100"/>
+      <media:content url="https://i.example.com/two.jpg" type="image/jpeg"/>
+    </item>
+    <item>
+      <guid>wider-body</guid>
+      <title>A small thumbnail and a large body picture</title>
+      <link>https://pictures.example.com/wider-body</link>
+      <media:thumbnail url="https://i.example.com/three-thumb.jpg" width="150"/>
+      <content:encoded><![CDATA[<p><img width="300" src="/three-300.jpg" srcset="/three-300.jpg 300w, /three-1024.jpg 1024w" sizes="(max-width: 300px) 100vw, 300px"></p>]]></content:encoded>
+    </item>
+    <item>
+      <guid>density</guid>
+      <title>A picture offered at twice the density</title>
+      <link>https://pictures.example.com/density</link>
+      <description><![CDATA[<img data-src="/lazy.jpg" src='/four.jpg' srcset='/four@2x.jpg 2x' width=200>]]></description>
+    </item>
+    <item>
+      <guid>upgraded-srcset</guid>
+      <title>Candidates that cannot load are skipped</title>
+      <link>https://pictures.example.com/upgraded-srcset</link>
+      <description><![CDATA[<img srcset="http://cdn.example.com/five.jpg?w=800&amp;q=80 800w, data:image/png;base64,AAAA 2000w">]]></description>
+    </item>
+    <item>
+      <guid>unknown-width-kept</guid>
+      <title>A picture of unknown width stays</title>
+      <link>https://pictures.example.com/unknown-width-kept</link>
+      <enclosure url="https://i.example.com/six.jpg" type="image/jpeg" length="123456"/>
+      <description><![CDATA[<img src="/six-body.jpg" width="1200">]]></description>
+    </item>
+    <item>
+      <guid>group-thumbnail</guid>
+      <title>A larger thumbnail in a group</title>
+      <link>https://pictures.example.com/group-thumbnail</link>
+      <media:thumbnail url="https://i.example.com/seven-120.jpg" width="120"/>
+      <media:group>
+        <media:thumbnail url="https://i.example.com/seven-480.jpg" width="480"/>
+      </media:group>
+    </item>
+    <item>
+      <guid>srcset-only</guid>
+      <title>A body picture with only a srcset</title>
+      <link>https://pictures.example.com/srcset-only</link>
+      <description><![CDATA[<img srcset="/eight-1600.jpg 1600w, /eight-400.jpg 400w">]]></description>
+    </item>
+  </channel>
+</rss>

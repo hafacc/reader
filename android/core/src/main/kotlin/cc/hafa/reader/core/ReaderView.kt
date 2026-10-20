@@ -27,6 +27,8 @@ data class ReaderState(
     val unreadOnly: Boolean = true,
     /** Id of the open article; empty for none. */
     val currentId: String = "",
+    /** Open articles not to mark read on leaving, since the person took that mark back or marked them unread. */
+    val keptUnread: Set<String> = emptySet(),
     /** Sanitized body of the open article. */
     val body: String = "",
     /** Id of the article [body] belongs to; empty while it loads. */
@@ -55,10 +57,29 @@ data class ReaderState(
     val heldFeeds: Set<String>? = null,
     /** Imports whose feeds are being checked for the first time. */
     val importing: Int = 0,
+    /**
+     * The list as it stood when a refresh the person asked for began. That
+     * view lists exactly these articles, whatever arrives or changes, until
+     * the refresh ends; null when none is held.
+     */
+    val frozenList: FrozenList? = null,
+    /** Refreshes the person asked for that have ended; the list goes back to its top at each. */
+    val refreshesEnded: Int = 0,
 ) {
     /** Whether feeds are being checked now. */
     val refreshing: Boolean get() = refreshCount > 0
+
+    /** Whether an entry shows as read: it is, or it is open and will be marked read when it is left. */
+    fun shownRead(entry: Entry): Boolean = entry.read || (entry.id == currentId && entry.id !in keptUnread)
 }
+
+/** A list held still while a refresh runs. */
+data class FrozenList(
+    /** Key of the view it belongs to; see [viewKey]. */
+    val key: String,
+    /** Ids of its articles, in order. */
+    val ids: List<String>,
+)
 
 /**
  * When a refresh starts to help: once the first feed is overdue (see
@@ -155,6 +176,8 @@ data class ReaderView(
     val starredCount: Int,
     /** Group names in use, sorted. */
     val folders: List<String>,
+    /** Whether mark all as read has anything to mark in the current view. */
+    val canMarkAllRead: Boolean,
 )
 
 /** Most unread first, then working before failing, then by name. */
@@ -251,6 +274,13 @@ fun unreadCounts(entries: List<Entry>, feeds: List<Feed>, settings: Map<String, 
         UnreadCounts(byFeed, byFolder, total).also { counts -> lastCounts = CountedFrom(entries, feeds, settings, counts) }
     }
 }
+
+/**
+ * Whether mark all as read marks [entry] in the current view, which lists [visible]: unread, and listed or in the
+ * view's unread count.
+ */
+fun markedByMarkAllRead(state: ReaderState, visible: Set<String>, entry: Entry): Boolean =
+    !entry.read && (entry.id in visible || countedInView(state, entry))
 
 /** Whether the current view's unread count includes an entry, read or not. */
 fun countedInView(state: ReaderState, entry: Entry): Boolean {
@@ -388,9 +418,15 @@ fun deriveView(state: ReaderState): ReaderView {
     val kept = baseEntries.filter { entry -> keeps(state, viewSettings, entry) }.map { entry -> entry.id }.toSet()
     val unreadOnly = state.unreadOnly && selection != Selection.Starred
     val held = state.heldEntries
-    val visible = ordered.filter { entry ->
-        entry.id == state.currentId ||
-            ((held == null || entry.id in held) && entry.id in kept && !(unreadOnly && entry.read && entry.id !in state.pinned))
+    val frozen = state.frozenList
+    val visible = if (frozen != null && frozen.key == viewKey(selection)) {
+        val byId = state.entries.associateBy { entry -> entry.id }
+        frozen.ids.mapNotNull { id -> byId[id] }
+    } else {
+        ordered.filter { entry ->
+            entry.id == state.currentId ||
+                ((held == null || entry.id in held) && entry.id in kept && !(unreadOnly && entry.read && entry.id !in state.pinned))
+        }
     }
     val counts = unreadCounts(state.entries, state.feeds, state.settings)
     val unread = counts.byFeed
@@ -421,6 +457,9 @@ fun deriveView(state: ReaderState): ReaderView {
         unreadTotal = counts.total,
         starredCount = state.entries.count { entry -> entry.starred },
         folders = foldersOf(state.feeds),
+        canMarkAllRead = visible.mapTo(HashSet()) { entry -> entry.id }.let { shown ->
+            baseEntries.any { entry -> markedByMarkAllRead(state, shown, entry) }
+        },
     )
 }
 

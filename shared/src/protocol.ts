@@ -46,7 +46,15 @@ export type ExtensionRequest =
     }
   | { type: "track"; feeds: TrackedFeed[] }
   | { type: "refresh"; feedIds: string[] }
-  | { type: "checkDue" }
+  | {
+      type: "checkDue";
+      /**
+       * Check every feed, not just the due ones: the due ones first, answered
+       * once they are saved, and the rest after in the background. Older
+       * extensions ignore it and check only the due ones, answering at once.
+       */
+      all?: boolean;
+    }
   | { type: "drain" }
   | { type: "ack"; upTo: number };
 
