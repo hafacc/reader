@@ -1,7 +1,7 @@
 package cc.hafa.reader.ui
 
 import cc.hafa.reader.core.ALT_TEXT_CLASS
-import cc.hafa.reader.core.bestSrcsetCandidate
+import cc.hafa.reader.core.pictureChoice
 import org.jsoup.Jsoup
 import org.jsoup.nodes.Element
 import org.jsoup.nodes.TextNode
@@ -59,6 +59,10 @@ sealed interface HtmlBlock {
         val link: String,
         /** What the picture shows, for screen readers. */
         val alt: String = "",
+        /** The image's `width` attribute in CSS pixels; 0 when it has none. */
+        val declaredWidth: Double = 0.0,
+        /** Pixel density of the picture at [source]. */
+        val density: Double = 1.0,
     ) : HtmlBlock
 
     /** A table, row by row. */
@@ -102,10 +106,11 @@ private class Walker(private val blocks: MutableList<HtmlBlock>) {
                 val name = node.normalName()
                 if (name == "img") {
                     flush()
-                    val best = bestSrcsetCandidate(node.attr("srcset"))
-                    val source = best.ifEmpty { node.absUrl("src").ifEmpty { node.attr("src") } }
-                    if (source.isNotEmpty()) {
-                        blocks.add(HtmlBlock.Image(source, place.link, node.attr("alt").trim()))
+                    val picture = pictureChoice(node)
+                    if (picture.address.isNotEmpty()) {
+                        blocks.add(
+                            HtmlBlock.Image(picture.address, place.link, node.attr("alt").trim(), picture.declaredWidth, picture.density),
+                        )
                     }
                 } else if (name == "br") {
                     inline.append("<br>")

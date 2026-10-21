@@ -20,6 +20,7 @@
   import { firstRun } from "#lib/first-run.ts";
   import { isEdgeSwipe, type Point } from "#lib/gestures.ts";
   import { shortcutKey } from "#lib/keys.ts";
+  import { isNarrow, NARROW_WIDTH } from "#lib/layout.ts";
   import { detectPlatform, type Platform } from "#lib/platform.ts";
   import { logFailure, Reader, viewKey } from "#lib/reader.svelte.ts";
   import { applyReadingFont } from "#lib/reading-font.ts";
@@ -28,8 +29,6 @@
   import { asset } from "$app/paths";
   import { page } from "$app/state";
 
-  // narrower than this is a phone layout
-  const NARROW_WIDTH = 768;
   // narrower than this, the sidebar stays an icon strip (opening over the list on hover) so the article keeps room
   const FULL_WIDTH = 1100;
   // how often to pick up what the extension found, and the slowest while the tab is hidden
@@ -97,9 +96,12 @@
       }
     }, DUE_CHECK_MS);
     document.addEventListener("visibilitychange", onVisibility);
+    // coming back from another window, as after installing the extension there, looks again at once
+    window.addEventListener("focus", check);
     return () => {
       clearInterval(timer);
       document.removeEventListener("visibilitychange", onVisibility);
+      window.removeEventListener("focus", check);
     };
   }
 
@@ -152,10 +154,6 @@
   /** Whether the screen is wide enough for three columns only with the sidebar as an icon strip. */
   function isCompact(): boolean {
     return window.innerWidth >= NARROW_WIDTH && window.innerWidth < FULL_WIDTH;
-  }
-
-  function isNarrow(): boolean {
-    return window.innerWidth < NARROW_WIDTH;
   }
 
   function here(): Place {
@@ -335,7 +333,11 @@
     m: () => logFailure(reader.toggleRead()),
     v: openOriginal,
     o: openOriginal,
-    A: () => logFailure(reader.markAllRead()),
+    A: () => {
+      if (reader.canMarkAllRead) {
+        logFailure(reader.markAllRead());
+      }
+    },
     r: () => logFailure(reader.refreshView()),
     R: () => logFailure(reader.refresh()),
     u: () => reader.setUnreadOnly(!reader.unreadOnly),
@@ -419,7 +421,7 @@
   <InstallExtension />
 {:else}
   <main
-    class="grid h-full grid-cols-1 md:grid-cols-[var(--side-width)_22rem_minmax(0,1fr)]"
+    class="grid h-full grid-cols-1 overflow-x-clip md:grid-cols-[var(--side-width)_22rem_minmax(0,1fr)]"
     style:--side-width={sideCollapsed ? "3.5rem" : "14rem"}
     inert={reader.gateBlocks}
   >
@@ -483,7 +485,9 @@
       </div>
     {:else}
       <div
-        class="min-h-0 {screen === "list" ? "block" : "hidden"} md:block"
+        class="min-h-0 {screen === "list"
+          ? "block"
+          : "hidden"} max-md:motion-safe:animate-list-in md:block"
         role="presentation"
         ontouchstart={onEdgeStart}
         ontouchend={onEdgeEnd}
@@ -497,7 +501,12 @@
           onsettings={toggleSettings}
         />
       </div>
-      <div class="min-h-0 {screen === "detail" ? "block" : "hidden"} md:block">
+      <!-- each pane plays its animation again whenever it is shown after being hidden -->
+      <div
+        class="min-h-0 {screen === "detail"
+          ? "block"
+          : "hidden"} max-md:motion-safe:animate-screen-in md:block"
+      >
         {#if helpShown}
           <ShortcutsPane {reader} onback={back} />
         {:else if addShown}

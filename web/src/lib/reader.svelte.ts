@@ -1,3 +1,4 @@
+import { SvelteSet } from "svelte/reactivity";
 import { upgradedAddress } from "$shared/address.ts";
 import { statusProblem } from "$shared/check.ts";
 import { type ParsedFeed, parseFeed } from "$shared/feed.ts";
@@ -35,7 +36,13 @@ import { overdueAt } from "$shared/schedule.ts";
 import { copy } from "./copy.ts";
 import { Database } from "./db.ts";
 import { ExtensionClient } from "./extension.svelte.ts";
-import { gateWakeAt, type LoadGate, startGate, stepGate } from "./load-gate.ts";
+import {
+  gateWakeAt,
+  type LoadGate,
+  OPENING_WAIT_MS,
+  startGate,
+  stepGate,
+} from "./load-gate.ts";
 import { parseOpml } from "./opml.ts";
 import { compareEntries } from "./order.ts";
 import {
@@ -411,12 +418,24 @@ export class Reader {
   heldEntries = $state.raw<ReadonlySet<string> | undefined>();
   /** Ids of the feeds the sidebar may list, held like `heldEntries`; undefined lets every feed in. */
   heldFeeds = $state.raw<ReadonlySet<string> | undefined>();
+  /**
+   * The list as it stood when a refresh the person asked for began: its view
+   * and its articles' ids in order. That view lists exactly these, whatever
+   * arrives or changes, until the refresh ends; undefined when none is held.
+   */
+  frozenList = $state.raw<
+    { key: string; ids: readonly string[] } | undefined
+  >();
+  /** Refreshes the person asked for that have ended; the list goes back to its top at each. */
+  refreshesEnded = $state(0);
   /** Imports whose feeds are being checked for the first time. */
   importing = $state(0);
   /** Whether the first look for the extension, and the take of what it found while the app was closed, has ended. */
   connected = $state(false);
   /** The browser extension that fetches feeds. */
   readonly extension = new ExtensionClient();
+  /** Longest wait at opening for the checks of feeds past due. */
+  openingWaitMs = OPENING_WAIT_MS;
   /** Optional sign-in and sync. */
   readonly sync = new Sync({
     local: (): LocalData => ({
@@ -445,7 +464,12 @@ export class Reader {
   private tombstones = new Map<string, number>();
   private draining: Promise<void> | undefined;
   private gateTimer: ReturnType<typeof setTimeout> | undefined;
-  private readonly manual = new Set<string>();
+  /** The `connect` under way, shared by every call that starts while it runs. */
+  private connecting: Promise<void> | undefined;
+  /** Whether the extension has been asked to check every feed since the app opened. */
+  private checkedAll = false;
+  /** Open entries not to mark read on leaving, since the person took that mark back or marked them unread. */
+  private readonly keptUnread = new SvelteSet<string>();
   private readonly iconsTried = new Set<string>();
   /** Plain http feeds not to try over https again while the app is open: tried with a definite answer, being tried, or out of tries, by id. */
   private readonly httpTried = new Set<string>();
@@ -533,15 +557,26 @@ export class Reader {
 
   /** Entries in the current view, in the chosen order. */
   visible = $derived.by(() => {
-    const unreadOnly = this.unreadOnly && this.selection.kind !== "starred";
-    const { kept, pinned, currentId, heldEntries } = this;
-    return this.ordered.filter(
-      (entry) =>
-        entry.id === currentId ||
-        ((heldEntries === undefined || heldEntries.has(entry.id)) &&
-          kept.has(entry.id) &&
-          !(unreadOnly && entry.read && !pinned[entry.id])),
-    );
+    const frozen = this.frozenList;
+    let shown: Entry[];
+    if (frozen !== undefined && frozen.key === viewKey(this.selection)) {
+      const byId = new Map(this.entries.map((entry) => [entry.id, entry]));
+      shown = frozen.ids.flatMap((id) => {
+        const entry = byId.get(id);
+        return entry === undefined ? [] : [entry];
+      });
+    } else {
+      const unreadOnly = this.unreadOnly && this.selection.kind !== "starred";
+      const { kept, pinned, currentId, heldEntries } = this;
+      shown = this.ordered.filter(
+        (entry) =>
+          entry.id === currentId ||
+          ((heldEntries === undefined || heldEntries.has(entry.id)) &&
+            kept.has(entry.id) &&
+            !(unreadOnly && entry.read && !pinned[entry.id])),
+      );
+    }
+    return shown;
   });
 
   /**
@@ -925,20 +960,48 @@ export class Reader {
 
   /**
    * Look for the extension and, once found, hand it the feeds, have it check
-   * the ones that are due without waiting for them, and take in what it has
-   * found. Nothing shows as refreshing and the sidebar keeps its order; the
-   * periodic drain picks up the checks' results.
+   * the ones past due, and every one the first time it is found, the ones
+   * past due first, and take in what it has found once those are saved or
+   * `OPENING_WAIT_MS` has passed, whichever is first. Calls while one runs
+   * share it. Nothing shows as refreshing and the sidebar keeps its order;
+   * the slower checks' results land unseen.
    */
-  async connect(): Promise<void> {
+  connect(): Promise<void> {
+    this.connecting ??= this.connectOnce().finally(() => {
+      this.connecting = undefined;
+    });
+    return this.connecting;
+  }
+
+  private async connectOnce(): Promise<void> {
     try {
-      const found = await this.extension.detect();
+      // the first look waits a moment for an extension Chrome has not loaded yet, holding the loading screen meanwhile
+      const found = await (this.checked
+        ? this.extension.detect()
+        : this.extension.find());
       this.checked = true;
       if (found) {
         await this.trackFeeds();
         logFailure(this.upgradeHttpFeeds());
-        // an extension too old to know this request answers with an error, and its own timer checks due feeds
-        await this.extension.send({ type: "checkDue" });
+        const all = !this.checkedAll;
+        this.checkedAll = true;
+        // an extension too old to know this request answers with an error, and its own timer checks due feeds;
+        // one too old to know `all` checks only the due feeds and answers at once
+        const dueChecked = this.extension.send({ type: "checkDue", all });
+        // offline, nothing would answer in time
+        if (navigator.onLine !== false) {
+          let timer: ReturnType<typeof setTimeout> | undefined;
+          await Promise.race([
+            dueChecked,
+            new Promise((resolve) => {
+              timer = setTimeout(resolve, this.openingWaitMs);
+            }),
+          ]);
+          clearTimeout(timer);
+        }
         await this.drainExtension();
+        // what the slower checks bring lands unseen, as background arrivals do
+        logFailure(dueChecked.then(() => this.drainExtension()));
       }
     } finally {
       this.checked = true;
@@ -1154,7 +1217,10 @@ export class Reader {
 
   /**
    * Check feeds now whatever their schedule says. With no ids, every feed.
-   * Requests are still conditional, so unchanged feeds cost little.
+   * Requests are still conditional, so unchanged feeds cost little. Read
+   * articles kept in the list go as it starts; then the list holds still
+   * (see `frozenList`) until the last refresh under way ends, when it takes
+   * in everything that arrived and goes back to its top.
    */
   async refresh(feedIds: string[] = []): Promise<void> {
     if (this.extension.version) {
@@ -1173,8 +1239,11 @@ export class Reader {
         ) {
           await this.close();
         }
+        this.frozenList ??= {
+          key: viewKey(this.selection),
+          ids: this.visible.map((entry) => entry.id),
+        };
         await this.checkFeeds(feedIds);
-        this.settle();
       } finally {
         const remaining = MIN_REFRESH_MS - (Date.now() - started);
         if (remaining > 0) {
@@ -1182,6 +1251,11 @@ export class Reader {
         }
         this.refreshCount -= 1;
         this.refreshing = this.refreshCount > 0;
+        if (!this.refreshing) {
+          this.frozenList = undefined;
+          this.settle();
+          this.refreshesEnded += 1;
+        }
       }
     }
   }
@@ -1264,6 +1338,7 @@ export class Reader {
     this.unreadOnly = next;
     this.pinned = {};
     this.heldTopics = {};
+    this.frozenList = undefined;
     if (this.heldEntries !== undefined) {
       this.settleList();
       this.heldFeeds = new Set(this.feeds.map((feed) => feed.id));
@@ -1294,6 +1369,7 @@ export class Reader {
       }
       this.pinned = {};
       this.heldTopics = {};
+      this.frozenList = undefined;
       if (this.heldEntries !== undefined) {
         this.settleList();
       }
@@ -1535,12 +1611,22 @@ export class Reader {
     }
   }
 
-  /** Flip the read mark on the open entry. */
+  /**
+   * Whether an entry shows as read: it is, or it is open and will be marked
+   * read when it is left.
+   */
+  shownRead(entry: Entry): boolean {
+    return (
+      entry.read ||
+      (entry.id === this.currentId && !this.keptUnread.has(entry.id))
+    );
+  }
+
+  /** Flip the read mark the open entry shows; see `toggleOpenRead`. */
   async toggleRead(): Promise<void> {
     const entry = this.current;
     if (entry) {
-      this.manual.add(entry.id);
-      await this.setRead([entry], !entry.read);
+      await this.toggleOpenRead(entry);
     }
   }
 
@@ -1557,22 +1643,32 @@ export class Reader {
     const entry = this.entries.find((candidate) => candidate.id === id);
     if (entry) {
       if (id === this.currentId) {
-        this.manual.add(id);
+        await this.toggleOpenRead(entry);
+      } else {
+        await this.setRead([entry], !entry.read);
       }
-      await this.setRead([entry], !entry.read);
     }
   }
 
+  /** Whether mark all as read has anything to mark in the current view. */
+  canMarkAllRead = $derived.by(() =>
+    this.baseEntries.some(this.markedByMarkAllRead()),
+  );
+
   /** Mark everything in the current view as read: what it lists and what its unread counts include. */
   async markAllRead(): Promise<void> {
+    const marked = this.baseEntries.filter(this.markedByMarkAllRead());
+    if (marked.length > 0) {
+      await this.setRead(marked, true);
+    }
+  }
+
+  /** A test of whether mark all as read marks an entry: unread, and listed or in the view's unread count. */
+  private markedByMarkAllRead(): (entry: Entry) => boolean {
     const shown = new Set(this.visible.map((entry) => entry.id));
     const counted = this.countedTest();
-    await this.setRead(
-      this.baseEntries.filter(
-        (entry) => !entry.read && (shown.has(entry.id) || counted(entry)),
-      ),
-      true,
-    );
+    return (entry): boolean =>
+      !entry.read && (shown.has(entry.id) || counted(entry));
   }
 
   /** A test of whether the current view's unread count includes an entry, read or not. */
@@ -1679,7 +1775,7 @@ export class Reader {
   private async clearLocal(): Promise<void> {
     await this.db?.clear();
     this.memoryBodies.clear();
-    this.manual.clear();
+    this.keptUnread.clear();
     this.currentId = "";
     this.body = "";
     this.neighborPictures.clear();
@@ -1691,6 +1787,7 @@ export class Reader {
     this.heldTopics = {};
     this.heldEntries = undefined;
     this.heldFeeds = undefined;
+    this.frozenList = undefined;
     this.select({ kind: "all" });
     this.freezeOrder();
     await this.trackFeeds();
@@ -2038,10 +2135,28 @@ export class Reader {
   }
 
   private async leave(entry: Entry): Promise<void> {
-    if (!(entry.read || this.manual.has(entry.id))) {
+    if (!(entry.read || this.keptUnread.has(entry.id))) {
       await this.setRead([entry], true);
     }
-    this.manual.delete(entry.id);
+    this.keptUnread.delete(entry.id);
+  }
+
+  /**
+   * Flip the read mark the open entry shows. An unread one waiting to be
+   * marked read on leaving stops waiting and saves nothing; one that has
+   * stopped is marked read now; a read one is marked unread and stays so on
+   * leaving.
+   */
+  private async toggleOpenRead(entry: Entry): Promise<void> {
+    if (entry.read) {
+      this.keptUnread.add(entry.id);
+      await this.setRead([entry], false);
+    } else if (this.keptUnread.has(entry.id)) {
+      this.keptUnread.delete(entry.id);
+      await this.setRead([entry], true);
+    } else {
+      this.keptUnread.add(entry.id);
+    }
   }
 
   /** The picture a site's page links to; empty when the page could not be read or links none. */

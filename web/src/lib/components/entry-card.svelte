@@ -8,6 +8,7 @@
 
   const {
     entry,
+    read,
     source,
     topics,
     active,
@@ -16,6 +17,8 @@
     onstar,
   }: {
     entry: Entry;
+    /** Whether the card shows the article as read. */
+    read: boolean;
     source: string;
     /** The article's topics in the view's order. */
     topics: string[];
@@ -109,7 +112,7 @@
     class="absolute inset-0 flex items-center justify-between bg-accent-soft px-6 text-accent"
     aria-hidden="true"
   >
-    {#if entry.read}
+    {#if read}
       <Undo2 class="size-5" />
       <Undo2 class="size-5" />
     {:else}
@@ -143,7 +146,7 @@
           {source}{entry.dated === false ? "" : ` · ${age(entry.published)}`}
         </span>
         <span
-          class="font-semibold leading-snug {entry.read && !active
+          class="font-semibold leading-snug {read && !active
             ? "text-faded"
             : ""} {entry.imageUrl || entry.excerpt ? "" : "pr-[4.5rem]"}"
           >{entry.title}</span
@@ -184,11 +187,11 @@
       <button
         type="button"
         class="grid size-8 place-items-center rounded-md text-muted hover:bg-line hover:text-ink"
-        aria-label={entry.read ? copy.markUnread : copy.markRead}
-        title={entry.read ? copy.markUnread : copy.markRead}
+        aria-label={read ? copy.markUnread : copy.markRead}
+        title={read ? copy.markUnread : copy.markRead}
         onclick={ontoggle}
       >
-        {#if entry.read}
+        {#if read}
           <Undo2 class="size-4" />
         {:else}
           <Check class="size-4" />

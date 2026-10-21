@@ -41,6 +41,7 @@ beforeEach(() => {
 describe("starting", () => {
   test("with no extension, checking ends and nothing is shown", async () => {
     const reader = new Reader();
+    reader.extension.lookMs = 0;
     await reader.init();
     expect(reader.checked).toBe(true);
     expect(reader.loaded).toBe(true);
@@ -63,7 +64,7 @@ describe("starting", () => {
     expect(reader.entries).toEqual([]);
   });
 
-  test("opening asks the extension to check due feeds, not every feed, and shows no refresh", async () => {
+  test("opening asks the extension to check every feed, due ones first, and shows no refresh", async () => {
     const reader = new Reader();
     const sent: string[] = [];
     const replies: Partial<Record<string, ExtensionResponse>> = {
@@ -75,16 +76,69 @@ describe("starting", () => {
     reader.extension.send = (
       request,
     ): Promise<ExtensionResponse | undefined> => {
-      sent.push(request.type);
+      sent.push(
+        request.type === "checkDue" && request.all === true
+          ? "checkDue all"
+          : request.type,
+      );
       return Promise.resolve(replies[request.type]);
     };
     const opening = reader.init();
     expect(reader.refreshing).toBe(false);
     await opening;
-    expect(sent).toContain("checkDue");
+    expect(sent).toContain("checkDue all");
     expect(sent).toContain("drain");
     expect(sent).not.toContain("refresh");
     expect(reader.refreshing).toBe(false);
+  });
+
+  test("opening takes in the due feeds' checks as soon as they are saved", async () => {
+    const reader = new Reader();
+    const sent: string[] = [];
+    let saved: (response: ExtensionResponse) => void = () => undefined;
+    reader.extension.send = (
+      request,
+    ): Promise<ExtensionResponse | undefined> => {
+      sent.push(request.type);
+      let reply: Promise<ExtensionResponse | undefined> =
+        Promise.resolve(undefined);
+      if (request.type === "ping") {
+        reply = Promise.resolve({ type: "pong", version: "1.0.0" });
+      } else if (request.type === "checkDue") {
+        reply = new Promise((resolve) => {
+          saved = resolve;
+        });
+      }
+      return reply;
+    };
+    const opening = reader.init();
+    for (let turn = 0; turn < 10 && !sent.includes("checkDue"); turn += 1) {
+      // biome-ignore lint/performance/noAwaitInLoops: each turn lets opening go one step on
+      await new Promise((resolve) => setTimeout(resolve, 1));
+    }
+    expect(sent).not.toContain("drain");
+    expect(reader.connected).toBe(false);
+    saved({ type: "queued" });
+    await opening;
+    expect(sent).toContain("drain");
+    expect(reader.connected).toBe(true);
+  });
+
+  test("opening waits no longer than its limit for the due feeds' checks", async () => {
+    const reader = new Reader();
+    reader.openingWaitMs = 5;
+    const replies: Partial<Record<string, ExtensionResponse>> = {
+      ping: { type: "pong", version: "1.0.0" },
+      drain: { type: "drained", seq: 0, more: false, status: [], pulled: [] },
+    };
+    reader.extension.send = (
+      request,
+    ): Promise<ExtensionResponse | undefined> =>
+      request.type === "checkDue"
+        ? new Promise(() => undefined)
+        : Promise.resolve(replies[request.type]);
+    await reader.init();
+    expect(reader.connected).toBe(true);
   });
 
   test("an extension too old to check due feeds still opens and drains", async () => {
@@ -104,6 +158,97 @@ describe("starting", () => {
     await reader.init();
     expect(reader.checked).toBe(true);
     expect(sent).toContain("drain");
+  });
+
+  test("the first look holds the loading screen until an extension Chrome loads late answers", async () => {
+    const reader = new Reader();
+    reader.extension.canHaveExtension = true;
+    reader.extension.retryMs = 1;
+    let pings = 0;
+    const replies: Partial<Record<string, ExtensionResponse>> = {
+      drain: { type: "drained", seq: 0, more: false, status: [], pulled: [] },
+    };
+    reader.extension.send = (
+      request,
+    ): Promise<ExtensionResponse | undefined> => {
+      if (request.type === "ping") {
+        pings += 1;
+        return Promise.resolve(
+          pings >= 3 ? { type: "pong", version: "1.0.0" } : undefined,
+        );
+      } else {
+        return Promise.resolve(replies[request.type]);
+      }
+    };
+    const opening = reader.init();
+    expect(reader.loadingBusy).toBe(true);
+    await opening;
+    expect(pings).toBe(3);
+    expect(reader.checked).toBe(true);
+    expect(reader.extension.version).toBe("1.0.0");
+  });
+
+  test("only the first look that finds the extension asks it to check every feed", async () => {
+    const reader = new Reader();
+    const sent: string[] = [];
+    const replies: Partial<Record<string, ExtensionResponse>> = {
+      ping: { type: "pong", version: "1.0.0" },
+      checkDue: { type: "queued" },
+      drain: { type: "drained", seq: 0, more: false, status: [], pulled: [] },
+    };
+    reader.extension.send = (
+      request,
+    ): Promise<ExtensionResponse | undefined> => {
+      if (request.type === "checkDue") {
+        sent.push(request.all === true ? "all" : "due");
+      }
+      return Promise.resolve(replies[request.type]);
+    };
+    await reader.init();
+    await reader.connect();
+    expect(sent).toEqual(["all", "due"]);
+  });
+
+  test("a connect that starts while the first runs shares it", async () => {
+    const reader = new Reader();
+    let pings = 0;
+    let checks = 0;
+    const replies: Partial<Record<string, ExtensionResponse>> = {
+      ping: { type: "pong", version: "1.0.0" },
+      checkDue: { type: "queued" },
+      drain: { type: "drained", seq: 0, more: false, status: [], pulled: [] },
+    };
+    reader.extension.send = (
+      request,
+    ): Promise<ExtensionResponse | undefined> => {
+      if (request.type === "ping") {
+        pings += 1;
+      } else if (request.type === "checkDue") {
+        checks += 1;
+      }
+      return Promise.resolve(replies[request.type]);
+    };
+    reader.loaded = true;
+    const first = reader.connect();
+    const second = reader.connect();
+    expect(second).toBe(first);
+    await Promise.all([first, second]);
+    expect(pings).toBe(1);
+    expect(checks).toBe(1);
+  });
+
+  test("once checked, a later look for the extension tries only once", async () => {
+    const reader = new Reader();
+    reader.extension.lookMs = 0;
+    await reader.init();
+    reader.extension.lookMs = 60_000;
+    let pings = 0;
+    reader.extension.send = (): Promise<ExtensionResponse | undefined> => {
+      pings += 1;
+      return Promise.resolve(undefined);
+    };
+    await reader.connect();
+    expect(pings).toBe(1);
   });
 
   test("an extension that stops answering is gone only after a few checks", async () => {
@@ -237,6 +382,56 @@ describe("loading", () => {
     reader.settle();
     expect(comics && reader.listed(comics)).toBe(true);
   });
+
+  test("a refresh holds the list still, then takes in what arrived and goes back to the top", async () => {
+    const reader = started([
+      article("a", { feedId: "tech", published: 1, title: "Rust" }),
+    ]);
+    reader.settle();
+    let finish: () => void = () => undefined;
+    reader.extension.send = (
+      request,
+    ): Promise<ExtensionResponse | undefined> =>
+      request.type === "refresh"
+        ? new Promise((resolve) => {
+            finish = (): void => resolve({ type: "refreshed" });
+          })
+        : Promise.resolve(undefined);
+    const refreshing = reader.refresh();
+    await reader["applyRemote"]({
+      ...emptyChange(),
+      entries: [article("b", { feedId: "comics", published: 2 })],
+      settings: new Map([["all", settings({ hideWords: ["rust"] })]]),
+    });
+    expect(reader.visible.map((entry) => entry.id)).toEqual(["a"]);
+    finish();
+    await refreshing;
+    expect(reader.visible.map((entry) => entry.id)).toEqual(["b"]);
+    expect(reader.refreshesEnded).toBe(1);
+  });
+
+  test("an empty list stays empty while a refresh runs", async () => {
+    const reader = started([]);
+    reader.settle();
+    let finish: () => void = () => undefined;
+    reader.extension.send = (
+      request,
+    ): Promise<ExtensionResponse | undefined> =>
+      request.type === "refresh"
+        ? new Promise((resolve) => {
+            finish = (): void => resolve({ type: "refreshed" });
+          })
+        : Promise.resolve(undefined);
+    const refreshing = reader.refresh();
+    await reader["applyRemote"]({
+      ...emptyChange(),
+      entries: [article("b", { feedId: "tech" })],
+    });
+    expect(reader.visible).toEqual([]);
+    finish();
+    await refreshing;
+    expect(reader.visible.map((entry) => entry.id)).toEqual(["b"]);
+  });
 });
 
 describe("unread counts", () => {
@@ -283,6 +478,22 @@ describe("unread counts", () => {
     await reader.markAllRead();
     expect(reader.tree.find((item) => item.kind === "folder")?.unread).toBe(0);
     expect(reader.unreadTotal).toBe(1);
+  });
+
+  test("mark all read is off once the view has nothing unread, or nothing at all", async () => {
+    const reader = makeReader([
+      article("a", { feedId: "tech" }),
+      article("b", { feedId: "comics", read: true }),
+    ]);
+    reader.select({ kind: "folder", name: "News" });
+    expect(reader.canMarkAllRead).toBe(true);
+    await reader.markAllRead();
+    expect(reader.canMarkAllRead).toBe(false);
+    reader.select({ kind: "feed", id: "comics" });
+    expect(reader.canMarkAllRead).toBe(false);
+    reader.select({ kind: "feed", id: "world" });
+    expect(reader.visible).toEqual([]);
+    expect(reader.canMarkAllRead).toBe(false);
   });
 });
 
@@ -377,6 +588,51 @@ describe("reading", () => {
     await reader.toggleReadFor("a");
     await reader.close();
     expect(reader.entries[0]?.read).toBe(false);
+  });
+
+  test("an open unread article shows as read, and taking that back keeps it unread on leaving", async () => {
+    const reader = makeReader([
+      article("a", { published: 3 }),
+      article("b", { published: 2 }),
+    ]);
+    await reader.open("a");
+    const opened = reader.current;
+    expect(opened && reader.shownRead(opened)).toBe(true);
+    await reader.toggleRead();
+    expect(reader.current?.read).toBe(false);
+    expect(opened && reader.shownRead(opened)).toBe(false);
+    await reader.open("b");
+    expect(reader.entries.find((entry) => entry.id === "a")?.read).toBe(false);
+    await reader.close();
+    expect(reader.entries.find((entry) => entry.id === "b")?.read).toBe(true);
+  });
+
+  test("marking a kept-unread article read does it at once and stays read on leaving", async () => {
+    const reader = makeReader([
+      article("a", { published: 3 }),
+      article("b", { published: 2 }),
+    ]);
+    await reader.open("a");
+    await reader.toggleRead();
+    await reader.toggleRead();
+    expect(reader.current?.read).toBe(true);
+    await reader.toggleReadFor("a");
+    expect(reader.current?.read).toBe(false);
+    await reader.open("b");
+    expect(reader.entries.find((entry) => entry.id === "a")?.read).toBe(false);
+    // b waits again, as every newly opened article does
+    const second = reader.current;
+    expect(second && reader.shownRead(second)).toBe(true);
+    await reader.open("a");
+    expect(reader.entries.find((entry) => entry.id === "b")?.read).toBe(true);
+    expect(reader.visible.map((entry) => entry.id)).toEqual(["a", "b"]);
+  });
+
+  test("an article that is not open shows its own mark", () => {
+    const reader = makeReader([article("a"), article("b", { read: true })]);
+    const [unread, read] = reader.entries;
+    expect(unread && reader.shownRead(unread)).toBe(false);
+    expect(read && reader.shownRead(read)).toBe(true);
   });
 
   test("turning unread only on closes a read article", async () => {

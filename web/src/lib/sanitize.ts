@@ -1,11 +1,8 @@
 import DomPurify from "dompurify";
 import { upgradedAddress } from "$shared/address.ts";
+import { srcsetCandidates } from "$shared/srcset.ts";
 
 const MIN_ALT_LENGTH = 12;
-// a srcset candidate: its address after any separators, then descriptors up to a comma
-const CANDIDATE_START = /[\s,]*(?<address>\S+)/uy;
-const DESCRIPTORS = /(?<descriptors>[^,]*),?/uy;
-const TRAILING_COMMAS = /,+$/u;
 /** Attributes holding the address of a picture or video, which must load over https. */
 const MEDIA_ATTRIBUTES = ["src", "poster"];
 const LOADABLE = /^(?:https|data):/iu;
@@ -40,44 +37,6 @@ export function absoluteUrl(address: string, base: string): string {
 /** Whether a picture may load from an address: https, or data held in the page. */
 function loadable(address: string): boolean {
   return LOADABLE.test(address);
-}
-
-/** One picture offered by a `srcset`. */
-export interface SrcsetCandidate {
-  /** The picture's address. */
-  address: string;
-  /** Its width or density, such as `424w` or `2x`; empty when not given. */
-  descriptors: string;
-}
-
-/**
- * The candidates of a `srcset`, read as the HTML spec does: an address runs
- * to the next whitespace, so it may hold commas (as CDN addresses and data
- * addresses do), and its descriptors run to the next comma.
- */
-export function srcsetCandidates(srcset: string): SrcsetCandidate[] {
-  const candidates: SrcsetCandidate[] = [];
-  let position = 0;
-  CANDIDATE_START.lastIndex = position;
-  let start = CANDIDATE_START.exec(srcset);
-  while (start !== null) {
-    let address = start.groups?.["address"] ?? "";
-    let descriptors = "";
-    position = CANDIDATE_START.lastIndex;
-    if (address.endsWith(",")) {
-      address = address.replace(TRAILING_COMMAS, "");
-    } else {
-      DESCRIPTORS.lastIndex = position;
-      descriptors = (
-        DESCRIPTORS.exec(srcset)?.groups?.["descriptors"] ?? ""
-      ).trim();
-      position = DESCRIPTORS.lastIndex;
-    }
-    candidates.push({ address, descriptors });
-    CANDIDATE_START.lastIndex = position;
-    start = CANDIDATE_START.exec(srcset);
-  }
-  return candidates;
 }
 
 /**

@@ -22,6 +22,13 @@ export const GATE_TIMING: GateTiming = {
   timeoutMs: 15_000,
 };
 
+/**
+ * Longest time, in milliseconds, the loading screen waits at opening for the
+ * checks of feeds past their due time; checks still running then go on
+ * behind it, and what they bring waits for the lists to be settled.
+ */
+export const OPENING_WAIT_MS = 1000;
+
 /** The loading screen's state; see `stepGate`. */
 export interface LoadGate {
   /** What the screen shows now. */

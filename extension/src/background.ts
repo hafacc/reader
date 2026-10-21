@@ -361,17 +361,46 @@ function enqueue(
   });
 }
 
-/** Queue background checks of the feeds whose schedule says they are due. */
-function queueDue(): Promise<{ check: CheckHandle; request: CheckRequest }[]> {
+/**
+ * Queue checks, at their scheduled odds of news, of the tracked feeds
+ * `include` picks, those `foreground` picks waited for by the caller.
+ */
+function queueScheduled(
+  include: (feed: ScheduledFeed, now: number) => boolean,
+  foreground: (feed: ScheduledFeed, now: number) => boolean,
+): Promise<{ check: CheckHandle; request: CheckRequest }[]> {
   return enqueue((tracked, now) =>
     tracked
-      .filter((feed) => feed.nextFetch <= now)
+      .filter((feed) => include(feed, now))
       .map((feed) => ({
         feed,
         probability: refreshProbability(feed, now),
-        foreground: false,
+        foreground: foreground(feed, now),
         timeoutMs: FETCH_TIMEOUT_MS,
       })),
+  );
+}
+
+function isDue(feed: ScheduledFeed, now: number): boolean {
+  return feed.nextFetch <= now;
+}
+
+/** Queue background checks of the feeds whose schedule says they are due. */
+function queueDue(): Promise<{ check: CheckHandle; request: CheckRequest }[]> {
+  return queueScheduled(isDue, () => false);
+}
+
+/**
+ * Queue a check of every tracked feed, as the web app asks when it opens: the
+ * due ones first and waited for, the rest after in the background, likelier
+ * ones first. Resolves once the due ones are saved.
+ */
+async function checkAll(): Promise<void> {
+  const checks = await queueScheduled(() => true, isDue);
+  await Promise.all(
+    checks
+      .filter(({ request }) => request.foreground)
+      .map(({ check }) => check.stored),
   );
 }
 
@@ -500,7 +529,11 @@ async function handle(request: ExtensionRequest): Promise<ExtensionResponse> {
     await refresh(request.feedIds);
     response = { type: "refreshed" };
   } else if (request.type === "checkDue") {
-    await queueDue();
+    if (request.all === true) {
+      await checkAll();
+    } else {
+      await queueDue();
+    }
     response = { type: "queued" };
   } else if (request.type === "drain") {
     response = await drain();

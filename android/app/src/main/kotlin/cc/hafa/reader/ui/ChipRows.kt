@@ -15,14 +15,15 @@ import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import cc.hafa.reader.core.TOPIC_ROWS
+import cc.hafa.reader.core.packedRows
 import cc.hafa.reader.core.rowCount
 import cc.hafa.reader.core.wrappedRows
 
 /**
  * A [chip] for each of [items], laid left to right in up to [TOPIC_ROWS] rows; when they need more, they go in that
- * many rows read down each column, and the block scrolls sideways. Each chip sits in its own traversal group, ordered
- * by its place in [items], so screen readers go through them in that order either way. Every list of topics or words
- * is shown this way.
+ * many rows, each chip at the end of the row that is shortest so far, and the block scrolls sideways. Each chip sits
+ * in its own traversal group, ordered by its place in [items], so screen readers go through them in that order either
+ * way. Every list of topics or words is shown this way.
  */
 @Composable
 fun <Item> ChipRows(items: List<Item>, chip: @Composable (Item) -> Unit) {
@@ -41,33 +42,20 @@ fun <Item> ChipRows(items: List<Item>, chip: @Composable (Item) -> Unit) {
         Layout(content, Modifier.semantics { isTraversalGroup = true }.horizontalScroll(rememberScrollState())) { measurables, _ ->
             val gapPx = 8.dp.roundToPx()
             val placeables = measurables.map { measurable -> measurable.measure(Constraints()) }
-            val wrapped = wrappedRows(placeables.map { placeable -> placeable.width }, available, gapPx)
-            val positions: List<IntOffset>
-            val width: Int
-            val height: Int
-            if (rowCount(wrapped) <= TOPIC_ROWS) {
-                val rowHeights = IntArray(rowCount(wrapped))
-                wrapped.forEachIndexed { index, position ->
-                    rowHeights[position.row] = maxOf(rowHeights[position.row], placeables[index].height)
-                }
-                val rowTops = rowHeights.runningFold(0) { top, rowHeight -> top + rowHeight }
-                positions = wrapped.map { position -> IntOffset(position.left, rowTops[position.row]) }
-                width = wrapped.indices.maxOfOrNull { index -> wrapped[index].left + placeables[index].width } ?: 0
-                height = rowTops.last()
-            } else {
-                val rowHeight = placeables.maxOf { placeable -> placeable.height }
-                val columnPositions = ArrayList<IntOffset>(placeables.size)
-                var left = 0
-                for (column in placeables.chunked(TOPIC_ROWS)) {
-                    column.forEachIndexed { row, _ -> columnPositions.add(IntOffset(left, row * rowHeight)) }
-                    left += column.maxOf { placeable -> placeable.width } + gapPx
-                }
-                positions = columnPositions
-                width = left - gapPx
-                height = rowHeight * TOPIC_ROWS
+            val widths = placeables.map { placeable -> placeable.width }
+            val wrapped = wrappedRows(widths, available, gapPx)
+            val positions = if (rowCount(wrapped) <= TOPIC_ROWS) wrapped else packedRows(widths, TOPIC_ROWS, gapPx)
+            val rowHeights = IntArray(rowCount(positions))
+            positions.forEachIndexed { index, position ->
+                rowHeights[position.row] = maxOf(rowHeights[position.row], placeables[index].height)
             }
+            val rowTops = rowHeights.runningFold(0) { top, rowHeight -> top + rowHeight }
+            val width = positions.indices.maxOfOrNull { index -> positions[index].left + placeables[index].width } ?: 0
+            val height = rowTops.last()
             layout(width, height) {
-                placeables.forEachIndexed { index, placeable -> placeable.place(positions[index]) }
+                placeables.forEachIndexed { index, placeable ->
+                    placeable.place(IntOffset(positions[index].left, rowTops[positions[index].row]))
+                }
             }
         }
     }

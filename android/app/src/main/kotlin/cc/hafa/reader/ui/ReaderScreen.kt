@@ -2,6 +2,8 @@ package cc.hafa.reader.ui
 
 import android.content.ActivityNotFoundException
 import androidx.activity.compose.BackHandler
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.EnterExitState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
@@ -16,13 +18,16 @@ import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.platform.UriHandler
@@ -73,7 +78,8 @@ fun ReaderScreen(viewModel: ReaderViewModel) {
         ) {
             if (current != null && current.state.loaded) {
                 val state = current.state
-                val listKey = "${viewKey(state.selection)}|${state.unreadOnly}|${current.view.viewSettings.sort}"
+                // The list starts again from its top for another view, and when a refresh ends.
+                val listKey = "${viewKey(state.selection)}|${state.unreadOnly}|${current.view.viewSettings.sort}|${state.refreshesEnded}"
                 LaunchedEffect(listKey) { listState.scrollToItem(0) }
                 // On the list Back is left to the system, which leaves the app; the open drawer's sheet closes it on Back.
                 BackHandler(enabled = drawerState.isClosed && viewModel.screen == Screen.Detail) { viewModel.back() }
@@ -125,21 +131,54 @@ private fun LoadingCover(showLogo: Boolean) {
     }
 }
 
-/** The list, or the detail screen on show. */
+/**
+ * The list, or the detail screen on show, moving between them as
+ * [placeTransform] describes. An article keeps showing as it slides off,
+ * and the list comes back with that article in view.
+ */
 @Composable
 private fun ScreenContent(snapshot: Snapshot, viewModel: ReaderViewModel, listState: LazyListState, onMenu: () -> Unit) {
-    if (viewModel.screen == Screen.List) {
-        if (snapshot.state.feeds.isEmpty()) {
-            FirstFeedScreen(snapshot, viewModel, onMenu)
-        } else {
-            EntryList(snapshot, viewModel, listState, onMenu)
+    val place = PhonePlace(viewModel.screen, viewModel.detail.takeIf { viewModel.screen == Screen.Detail })
+    val leaving = remember { LeavingArticle() }
+    SideEffect {
+        if (place.detail == Detail.Article && snapshot.view.current != null) {
+            leaving.snapshot = snapshot
+            leaving.towards = Offset.Zero
+        } else if (place.detail != null && place.detail != Detail.Article) {
+            leaving.snapshot = null
         }
-    } else {
-        when (viewModel.detail) {
-            Detail.Article -> ArticleScreen(snapshot, viewModel)
-            Detail.Settings -> SettingsScreen(snapshot, viewModel)
-            Detail.Add -> AddFeedScreen(snapshot, viewModel)
-            Detail.Account -> AccountScreen(viewModel)
+    }
+    val animate = animationsOn()
+    val layoutDirection = LocalLayoutDirection.current
+    AnimatedContent(
+        targetState = place,
+        transitionSpec = { placeTransform(animate, leaving, layoutDirection) },
+        label = "screen",
+    ) { shown ->
+        val exiting = transition.targetState == EnterExitState.PostExit
+        Box(Modifier.fillMaxSize().blockingTouches(exiting)) {
+            if (shown.detail == null) {
+                if (snapshot.state.feeds.isEmpty()) {
+                    FirstFeedScreen(snapshot, viewModel, onMenu)
+                } else {
+                    EntryList(snapshot, viewModel, listState, onMenu, reveal = leaving.snapshot?.view?.current?.id ?: "")
+                }
+            } else {
+                when (shown.detail) {
+                    Detail.Article -> ArticleScreen(
+                        if (exiting) leaving.snapshot ?: snapshot else snapshot,
+                        viewModel,
+                        leaving = exiting,
+                        onClose = { towards ->
+                            leaving.towards = towards
+                            viewModel.back()
+                        },
+                    )
+                    Detail.Settings -> SettingsScreen(snapshot, viewModel)
+                    Detail.Add -> AddFeedScreen(snapshot, viewModel)
+                    Detail.Account -> AccountScreen(viewModel)
+                }
+            }
         }
     }
 }

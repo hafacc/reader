@@ -4,6 +4,7 @@ import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.launch
 import cc.hafa.reader.core.sync.RemoteChange
+import cc.hafa.reader.core.sync.SavedSettings
 import cc.hafa.reader.core.sync.SyncReport
 import cc.hafa.reader.core.sync.SyncStatus
 import kotlinx.coroutines.test.StandardTestDispatcher
@@ -232,16 +233,39 @@ class ReaderModelTest {
     }
 
     @Test
-    fun `marking the open article unread sticks when it is left`() = runTest {
+    fun `an open unread article shows as read, and taking that back keeps it unread on leaving`() = runTest {
         val model = model()
-        model.addWithItems("https://a.example/feed", "one")
-        val id = model.view().visible.first().id
-        model.open(id)
-        model.toggleRead()
+        model.addWithItems("https://a.example/feed", "one", "two")
+        val (first, second) = model.view().visible
+        model.open(first.id)
+        assertTrue(model.state.value.shownRead(model.view().current!!))
         model.toggleRead()
         assertFalse(model.view().current!!.read)
+        assertFalse(model.state.value.shownRead(model.view().current!!))
+        model.open(second.id)
+        assertFalse(model.state.value.entries.first { entry -> entry.id == first.id }.read)
+        assertTrue(model.state.value.shownRead(model.view().current!!), "a newly opened article waits again")
         model.close()
-        assertFalse(model.state.value.entries.first().read)
+        assertTrue(model.state.value.entries.first { entry -> entry.id == second.id }.read)
+        assertFalse(model.state.value.shownRead(model.state.value.entries.first { entry -> entry.id == first.id }))
+    }
+
+    @Test
+    fun `marking a kept-unread article read does it at once, and marking a read one unread sticks on leaving`() = runTest {
+        val model = model()
+        model.addWithItems("https://a.example/feed", "one", "two")
+        val (first, second) = model.view().visible
+        model.open(first.id)
+        model.toggleRead()
+        model.toggleRead()
+        assertTrue(model.view().current!!.read)
+        model.toggleReadFor(first.id)
+        assertFalse(model.view().current!!.read)
+        model.open(second.id)
+        assertFalse(model.state.value.entries.first { entry -> entry.id == first.id }.read)
+        model.open(first.id)
+        assertTrue(model.state.value.entries.first { entry -> entry.id == second.id }.read)
+        assertEquals(listOf("one", "two"), model.titles())
     }
 
     @Test
@@ -266,6 +290,8 @@ class ReaderModelTest {
         model.setUnreadOnly(false)
         model.open(model.view().visible[1].id)
         val open = model.state.value.currentId
+        // the first tap only stops it being marked read on leaving
+        model.toggleRead()
         model.toggleRead()
         model.setUnreadOnly(true)
         assertEquals("", model.state.value.currentId)
@@ -281,6 +307,19 @@ class ReaderModelTest {
         val open = model.state.value.currentId
         model.setUnreadOnly(true)
         assertEquals(open, model.state.value.currentId)
+    }
+
+    @Test
+    fun `mark all read is off once the view has nothing unread, or nothing at all`() = runTest {
+        val model = model()
+        assertFalse(model.view().canMarkAllRead)
+        model.addWithItems("https://a.example/feed", "one", "two")
+        assertTrue(model.view().canMarkAllRead)
+        model.markAllRead()
+        assertFalse(model.view().canMarkAllRead)
+        model.setUnreadOnly(false)
+        assertEquals(2, model.view().visible.size)
+        assertFalse(model.view().canMarkAllRead)
     }
 
     @Test
@@ -375,13 +414,62 @@ class ReaderModelTest {
     }
 
     @Test
-    fun `a check that breaks releases its feed without saving anything`() = runTest {
+    fun `a fetch that breaks counts as no answer, so the feed backs off`() = runTest {
         val model = model()
         model.addWithItems("https://a.example/feed", "one")
-        val before = model.state.value.feeds.single().schedule
         fetcher.failure = IllegalStateException("broken")
         model.refresh()
-        assertEquals(before, model.state.value.feeds.single().schedule)
+        val schedule = model.state.value.feeds.single().schedule
+        assertEquals(1, schedule.failures)
+        assertEquals(FeedProblem.NoAnswer.code, schedule.problem)
+        assertTrue(schedule.nextFetch > now)
+    }
+
+    @Test
+    fun `a refresh holds the list still, then takes in what arrived and goes back to the top`() = runTest {
+        val model = model()
+        model.addWithItems("https://a.example/feed", "one")
+        val feed = model.state.value.feeds.single()
+        model.select(Selection.All)
+        model.settle()
+        fetcher.answers["https://a.example/feed"] = FetchOutcome(status = 304)
+        val gate = CompletableDeferred<Unit>()
+        fetcher.gate = gate
+        val refreshing = launch { model.refresh() }
+        runCurrent()
+        model.syncHost.apply(
+            RemoteChange(
+                entries = listOf(article("later", feed.id, now)),
+                settings = mapOf("all" to SavedSettings(DEFAULT_SETTINGS.copy(hideWords = listOf("one")), now)),
+            ),
+        )
+        assertEquals(listOf("one"), model.titles())
+        gate.complete(Unit)
+        refreshing.join()
+        assertEquals(listOf("Story later"), model.titles())
+        assertEquals(1, model.state.value.refreshesEnded)
+        assertEquals(null, model.state.value.frozenList)
+    }
+
+    @Test
+    fun `an empty list stays empty while a refresh runs`() = runTest {
+        val model = model()
+        model.addWithItems("https://a.example/feed", "one")
+        val feed = model.state.value.feeds.single()
+        model.markAllRead()
+        model.select(Selection.Starred)
+        model.select(Selection.All)
+        model.settle()
+        fetcher.answers["https://a.example/feed"] = FetchOutcome(status = 304)
+        val gate = CompletableDeferred<Unit>()
+        fetcher.gate = gate
+        val refreshing = launch { model.refresh() }
+        runCurrent()
+        model.syncHost.apply(RemoteChange(entries = listOf(article("later", feed.id, now))))
+        assertEquals(emptyList(), model.titles())
+        gate.complete(Unit)
+        refreshing.join()
+        assertEquals(listOf("Story later"), model.titles())
     }
 
     @Test
@@ -454,9 +542,10 @@ class ReaderModelTest {
     fun `marking the open article unread from the list sticks when it is left`() = runTest {
         val model = model()
         model.addWithItems("https://a.example/feed", "one")
+        model.setUnreadOnly(false)
         val id = model.view().visible.single().id
-        model.open(id)
         model.toggleReadFor(id)
+        model.open(id)
         model.toggleReadFor(id)
         model.close()
         assertFalse(model.state.value.entries.single().read)
@@ -583,7 +672,7 @@ class ReaderModelTest {
     }
 
     @Test
-    fun `opening checks only due feeds in the background without showing a refresh`() = runTest {
+    fun `opening checks every feed, due ones first, waiting no longer than its limit`() = runTest {
         val first = model()
         first.addWithItems("https://a.example/feed", "one")
         now += MAX_INTERVAL_MS
@@ -603,17 +692,50 @@ class ReaderModelTest {
             minRefreshMillis = 0,
             onBackgroundWork = { backgroundCalls += 1 },
         )
+        val started = testScheduler.currentTime
         model.openChecks()
+        assertEquals(OPENING_WAIT_MS, testScheduler.currentTime - started)
         runCurrent()
         assertTrue(model.state.value.loaded)
         assertFalse(model.state.value.refreshing)
         assertEquals(1, backgroundCalls)
-        assertEquals(listOf("https://a.example/feed"), fetcher.requests)
+        assertEquals(listOf("https://a.example/feed", "https://b.example/feed"), fetcher.requests)
         val rank = model.state.value.frozenRank
         gate.complete(Unit)
         model.awaitChecks()
-        assertEquals(listOf("https://a.example/feed"), fetcher.requests)
+        assertEquals(listOf("https://a.example/feed", "https://b.example/feed"), fetcher.requests)
         assertTrue(rank === model.state.value.frozenRank)
+    }
+
+    @Test
+    fun `opening ends its wait once the due feeds are saved, and at once offline`() = runTest {
+        val first = model()
+        first.addWithItems("https://a.example/feed", "one")
+        now += MAX_INTERVAL_MS
+        first.addWithItems("https://b.example/feed", "two")
+        first.awaitWrites()
+        val gate = CompletableDeferred<Unit>()
+        fetcher.gates["https://b.example/feed"] = gate
+        var online = true
+        fun opened() = ReaderModel(
+            store,
+            preferences,
+            fetcher,
+            backgroundScope,
+            clock = { now },
+            workDispatcher = StandardTestDispatcher(testScheduler),
+            minRefreshMillis = 0,
+            online = { online },
+        )
+        val started = testScheduler.currentTime
+        opened().openChecks()
+        assertTrue(testScheduler.currentTime - started < OPENING_WAIT_MS)
+        fetcher.gates["https://a.example/feed"] = CompletableDeferred()
+        online = false
+        val offline = testScheduler.currentTime
+        opened().openChecks()
+        assertEquals(offline, testScheduler.currentTime)
+        gate.complete(Unit)
     }
 
     @Test

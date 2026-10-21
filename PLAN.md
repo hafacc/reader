@@ -50,7 +50,7 @@ fetches feeds itself and syncs through Firebase.
   searches and accounts, not from the person, and trying them must not reach
   the device or its network. A followed http feed
   is never put on the schedule and never counts as due; each one is tried once
-  each time the app starts (alongside its checks of due feeds), at most six
+  each time the app starts (alongside its checks of every feed), at most six
   at once, and again on each later refresh while its tries get no definite
   answer (no answer at all, as offline or after a timeout, or a 408, 425, 429
   or 5xx), at most three tries without one (`UNSETTLED_TRIES`) until the app
@@ -230,10 +230,14 @@ from a device.
    over the weekend and quiet hours are skipped. Waits range from 15 minutes to 7
    days, never shorter than the site's `Retry-After` or `Cache-Control: max-age`,
    and a failing feed backs off from 15 minutes by doubling, or longer when the
-   site asks. Opening the app queues a check of every feed that is due,
-   without waiting for it and without showing a refresh (the web sends
-   `checkDue`, which the extension answers as soon as the checks are queued,
-   then takes in what the extension found while the app was closed; the
+   site asks. Opening the app queues a check of every feed without showing
+   a refresh: the feeds past their due time first, waited for, then the rest
+   by the chance below. The loading screen waits until the feeds past due are
+   saved or 1 second has passed (`OPENING_WAIT_MS`), whichever is first, and
+   not at all offline; the other checks go on behind it (the web sends
+   `checkDue` with `all`, which the extension answers once the feeds past due
+   are saved, then takes in what the extension found; an extension that does
+   not know `all` checks only the due feeds and answers at once, and later
    results land through the usual drain), and the refresh controls force a
    check of the feeds they cover, so freshness comes from the reader and the
    schedule only has to avoid missing posts. Every fetch sends `ETag` and `If-Modified-Since`; a `304` ends
@@ -280,8 +284,10 @@ from a device.
    their own `updatedAt` and never sent back. Writes are batched (at most 500)
    and queued by Firestore's offline cache while offline.
 
-Background updates: the extension wakes on a timer; Android uses WorkManager
-(about every 15 minutes at best); iOS uses background app refresh (system
+Background updates: the extension wakes on a timer (every 5 minutes); Android
+uses WorkManager (about every 15 minutes at best, often much less), and while
+its screen shows it checks due feeds every 5 minutes too, and at once on
+coming back to the app; iOS uses background app refresh (system
 decides). Web with the extension closed gets nothing until a device opens.
 
 ## Reading features
@@ -304,8 +310,9 @@ decides). Web with the extension closed gets nothing until a device opens.
   words and topics, and an article's topics, on Starred too) is ordered by how
   many of the view's articles carry or match each (most first, then by name; an
   article lists each of its topics once), wrapping into up to three rows; when
-  they need more, they go in three rows read down each column and scroll
-  sideways. Chips never move when toggled. On a phone each topic chip, and
+  they need more, they go in three rows that scroll sideways together, each
+  chip in turn at the end of the row that is shortest so far (the upper on a
+  tie), so the rows are packed with no columns. Chips never move when toggled. On a phone each topic chip, and
   each word's remove button, takes taps 44 pixels tall (48 dp on Android)
   around its smaller outline; both lists use the same chip. A feed's own
   settings also apply in every group and view it appears in.
@@ -339,14 +346,20 @@ decides). Web with the extension closed gets nothing until a device opens.
   letter tile. The sidebar rows keep one icon column in both states.
 - **Refreshing:** the Reader name goes to All items and checks every feed, as
   does `Shift R`; clicking the row of the view you are in, the `r` key and pulling
-  the list down from its top on a phone check the feeds of that view, as does the
-  Refresh bar that ends every non-empty list (shown once every row is drawn);
-  there is no Refresh button in the bars and no gesture at the bottom. Opening
-  the app checks only the feeds that are due, in the background: nothing turns,
-  the logo does not pulse, the list keeps its rows and Refresh stays usable. A
+  the list down from its top or up past its end on a phone check the feeds of that view, as does the
+  Refresh bar that ends every non-empty list on a wide screen (shown once every row is drawn);
+  there is no Refresh button in the bars. Opening
+  the app checks every feed, those past due first, behind the loading screen
+  and then in the background: nothing turns, the logo does not pulse, the
+  list keeps its rows and Refresh stays usable. A
   refresh drops the read articles
-  kept in the list as soon as it starts; on a phone the list shows a turning
-  marker until it ends. Only a refresh the person asks for shows: an import's
+  kept in the list as soon as it starts; then the list holds still until it
+  ends, whatever arrives or changes (checks, the account's changes, its
+  settings): no row appears, moves or goes. When the last refresh under way
+  ends, the lists take in everything at once and the list goes back to its
+  top. Changing view or unread only lets the list go at once. On a phone the
+  list shows a turning marker until it ends, at the top, or at the end for a refresh
+  asked for by a pull past the end. Only a refresh the person asks for shows: an import's
   first check of its feeds runs behind the loading screen, and every other
   check and every change from the account lands unseen.
 - **Unread only:** one switch for the whole app, an eye button in the list's bar (at the bottom on a phone),
@@ -380,7 +393,12 @@ decides). Web with the extension closed gets nothing until a device opens.
   read or starred marks change. With 20,000 articles, toggling unread only takes about 60 ms, all on
   the main thread.
 - **Reading state:** opening an article does not mark
-  it read, leaving it does; read articles, here or on another device, stay
+  it read, leaving it does; while it is open its read button already shows it
+  as read ("Mark as unread"). Pressing it then only stops leaving from marking
+  it read (nothing is saved or synced), and the button offers "Mark as read",
+  which marks it read at once. An article already read when opened is marked
+  unread at once and stays unread on leaving. The `m` key and the open
+  article's card in the list work the same way. Read articles, here or on another device, stay
   listed until the view changes;
   stepping past either end closes the article.
 - **Sidebar order:** groups come first, then loose feeds; each list is ordered by
@@ -396,7 +414,8 @@ decides). Web with the extension closed gets nothing until a device opens.
   opaque screen covers the app and takes every tap, key and swipe (Back still
   leaves the app from the list on Android): at opening, while stored data is
   read (and, on the web, the extension is found and what it fetched while the
-  app was closed is taken in); while the account's data arrives, at opening
+  app was closed is taken in), and until the feeds past their due time have
+  been checked or 1 s has passed; while the account's data arrives, at opening
   when signed in and after signing in or replacing this device's data, until
   its feeds and settings have come from the server, the entry listener's first
   changes are stored and the first pass has the last 90 days (sync offline,
@@ -418,8 +437,8 @@ decides). Web with the extension closed gets nothing until a device opens.
   the view changes, as one read here does. A list or sidebar that shows
   nothing takes in what arrives, since no row can move; a feed the person adds
   shows at once. Unread counts still change as marks and articles arrive.
-- **Refresh dot:** a small accent dot on the sidebar logo and on the phone's menu
-  button ("Some feeds are due for a check") says a refresh would help: a feed's
+- **Refresh dot:** a small accent dot on the sidebar logo and on the logo in the
+  phone list's bottom bar ("Some feeds are due for a check") says a refresh would help: a feed's
   scheduled check is more than 30 minutes late (`OVERDUE_MS`, twice the shortest
   wait, so the background timers normally get there first) and nothing is
   checking feeds. It is worked out from the earliest next check, one pass per
@@ -443,7 +462,19 @@ decides). Web with the extension closed gets nothing until a device opens.
   article open, the app fetches ahead up to four pictures of each article on
   either side (the lead picture, then the body's first, as the sanitizer keeps
   them), unless the browser asks to save data or Android's Data Saver is on; the
-  web fetches them without a referrer and at low priority.
+  web fetches them without a referrer and at low priority. The lead picture is
+  the feed's own (Media RSS image contents and image enclosures before
+  thumbnails, then those in Media RSS groups; JSON Feed's `image`), given up
+  for a later one only when both widths are known and the later is wider, the
+  body's first picture coming last as its largest `src` or `srcset`
+  candidate (`shared/fixtures/images.xml`). The list and the article both use
+  that largest picture; the article shows no separate lead picture when the
+  body already shows it at any of its candidates. Pictures are never shown wider than their
+  own size (one picture pixel to one CSS pixel or dp) nor scaled down by the
+  app. The web keeps `srcset`, `sizes` and `<picture>` sources for the browser
+  to choose from; Android, which cannot, loads the largest candidate among the
+  image's `srcset` and its `<picture>`'s sources that have no `media` and a
+  type every Android version shows.
 - **Star and share:** the article's button is "Star", a status that fills when set.
   Share uses the device's share sheet where the browser has one, and otherwise
   copies the link.
@@ -451,42 +482,89 @@ decides). Web with the extension closed gets nothing until a device opens.
   Telegram public channels have only a web preview page, which is not read:
   such readers break when the site changes.
 - **Navigation:** one page app; the extension plays the part a service worker does
-  for a PWA (fetching, schedule, background). On a phone the menu button in the
-  list's bottom bar opens the feed list over the articles, as does tapping the view's name
-  beside it ("Show feeds"),
-  as does a swipe in from the left edge on the web (the Android app opens it only from
+  for a PWA (fetching, schedule, background). On a phone the list's bottom bar starts with one button, the
+  logo, the view's name and a small up-and-down chevron ("Show feeds"), that opens the
+  feed list over the articles, as does a swipe in from the left edge on the web (the Android app opens it only from
   the button, since a sideways swipe on a card marks it read); moving between the article list and an article
   adds browser history entries, so Back steps out. On Android, Back on the article list
   leaves the app, Back with the feed list open closes it, and Back from an article or a
   panel returns to the list.
 - **Bars (phone):** every screen puts its controls in a bar at the bottom, where a
   thumb reaches them (Material's bottom app bar on Android, the same bar on the web,
-  above the home indicator and the keyboard). The list has the menu button, the view's
-  name, unread only, view settings and mark all as read; the article has Back, star,
+  above the home indicator and the keyboard). The list has the button that opens the feed
+  list (the logo, which carries the refresh dot and broadcasts its waves while feeds
+  are checked, still when the system or browser turns motion off; the view's name,
+  cut short with an ellipsis when long; and a small chevron), unread only, view settings
+  and mark all as read (dimmed and off, for screen readers too, while the view has
+  nothing unread, empty or not; `Shift A` then does nothing); the article has Back, star,
   read, share and open the original, which on a phone appear only there; view settings,
   add feed and sync have Back and the screen's name. On Android the bars slide away while
   scrolling down and come back on the way up, on every new screen or article, and
-  whenever the article is too short to scroll; there every scrolling screen ends with
+  whenever the article is at its top or end (as when it is too short to scroll), sliding
+  back in then as it does after a scroll; there every scrolling screen ends with
   room for the bar's full height and a margin, the same whether the bar is shown or
   not, so the end clears the bar and there is room to scroll back up and bring it back.
   The web's bars always show and sit below the content, so it needs no such room. Wide
   screens keep the bars at the top.
 - **Gestures (phone):** swipe a card sideways to mark it read or unread; swipe an
   article left or right and it slides to the next or previous one in the list's order
-  (a pager on Android); a swipe of at least 90 pixels (90 dp on Android) past the first or last slides
-  the article off and closes it, as stepping past either end does with the keys,
-  while a shorter one springs back; pull down at the top of the
+  (a pager on Android; on the web a swipe of at least 90 pixels steps); a swipe of at
+  least 96 pixels (96 dp on Android) of finger travel past the first or last article
+  slides the article off and closes it, as stepping past either end does with the
+  keys, while a shorter one springs back; a one-finger drag of at least 96 pixels (96 dp) of
+  finger travel on past the article's top or end, started with it already there,
+  closes it, so a scroll that merely reaches the edge does not. Both are pulls, with
+  the same feedback, sideways for the swipe. During the pull the
+  article follows the finger less and less (moved `160 × (1 − e^(−travel / 160))`,
+  the same function on both, `pullStretch`, in place of the browser's own
+  overscroll); a round marker with an arrow, the one pull to refresh shows (Material's
+  pull to refresh indicator on Android: its 40 dp raised circle and colors; on the web
+  the list's own pull marker), fades and grows in, centered in the gap at that
+  edge and pointing the way of the pull, and turns over, in the accent color, once letting go would close
+  the article, which screen readers hear as "Release to close", with a short haptic
+  tick each time the pull crosses that point, either way (Android's gesture
+  threshold feedback; on the web a 10 ms `navigator.vibrate` where the browser has
+  it, as Chrome on Android does, and nothing elsewhere). Letting go
+  past it slides the article on off the way it was pulled and closes it; short of
+  it, it springs back. With motion turned off the article stays put and only the
+  arrow shows the pull. Pull down at the top of the
   list to check the view's feeds (Material's pull to refresh on Android, the same
-  marker on the web).
-- **End of list:** the last row of a list that has articles is a full-width
-  "Refresh" bar, tappable anywhere across it, that checks the view's feeds as
-  pulling down does; while they are checked it keeps its label, is disabled and
-  its icon turns (still when the system or browser turns motion off). It sits
-  above the bottom bar; there is no pull-up gesture. A list with no articles
-  shows only a line of text, with no picture.
+  marker on the web), with the same tick each time a finger's pull crosses the point
+  where letting go checks them. Pulling
+  the list up past its end, started with it already there (on the web with every row
+  drawn), checks them too, built as the article's pull is: the same distance (96),
+  `pullStretch`, marker below the list's end turning over at that point ("Release to
+  refresh"), tick and spring back; letting go past it checks the feeds as pulling down
+  does, and the marker then turns there until they are checked. While they are being
+  checked neither pull does anything (no stretch, marker or tick; the list scrolls as
+  usual and the turning marker stays where it is), and a refresh starting midway ends
+  a pull, which springs back.
+- **Screen changes (phone):** the article and the other detail screens slide in
+  from the end over the list, which shrinks a little and dims under them (300 ms,
+  Material's standard easing). Leaving for the list, by Back, the bar's Back, a
+  swipe past either end or a pull past the top or end, the screen slides off,
+  toward the end for Back and on the way a drag sent the article, while the list
+  comes back up under it, at its scroll position and with the article just left in
+  full view (on Android). On Android a pager's
+  articles fade a little as they slide; one detail screen replacing another fades
+  through. Nothing moves when the system turns animations off or the browser asks
+  for reduced motion. The web plays the same entrances when a pane is shown; the
+  pane going away disappears at once, except an article swiped or pulled off, which slides.
+- **End of list:** on a phone a list ends with its last card; pulling up past it
+  checks the feeds (see Gestures). Screen readers still have a way: on Android the
+  list has a "Refresh" accessibility action, and on the web the "Refresh" bar below
+  stays for them and for the keyboard, unseen until focused. On a wide web screen
+  the last row of a list that has articles is that full-width "Refresh" bar,
+  tappable anywhere across it, that checks the view's feeds as pulling down does;
+  while they are checked it keeps its label, is disabled and its icon turns (still
+  when the browser turns motion off). A list with no articles shows only a line of
+  text, with no picture.
 - **Sidebar:** a brand header (the icon and "Reader") stays in place while the
   sidebar collapses to an icon strip, which opens over the list when hovered; icons
   and rows keep their positions so the change is a smooth width and fade.
+  Below the feeds, in this order: a "Contact us" row that opens the contact
+  page (in the browser on Android), shown signed in or not on every layout so
+  contact details are easy to find in the app; the sync row; and Add feed.
 - **Account picture:** when signed in, the sidebar's sync row and the account
   card show the Google account's picture in a round avatar (asked for at 96
   pixels, https only, without a referrer), with the email's first letter until

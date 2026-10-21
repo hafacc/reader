@@ -19,6 +19,7 @@ import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.ErrorOutline
 import androidx.compose.material.icons.outlined.Folder
 import androidx.compose.material.icons.outlined.Inbox
+import androidx.compose.material.icons.outlined.MailOutline
 import androidx.compose.material.icons.outlined.StarOutline
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -31,6 +32,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
@@ -44,18 +46,27 @@ import cc.hafa.reader.R
 import cc.hafa.reader.core.Selection
 import cc.hafa.reader.core.sidebarRows
 import cc.hafa.reader.core.viewKey
+import cc.hafa.reader.sync.SyncConfig
 
-private val PINNED_FOOTER_HEIGHT = 480.dp
+private val PINNED_FOOTER_HEIGHT = 536.dp
 
-/** The feed list in the left drawer: the brand, All items, Starred, groups and feeds, sync, and Add feed. */
+/** The feed list in the left drawer: the brand, All items, Starred, groups and feeds, Contact us, sync, and Add feed. */
 @Composable
 fun Sidebar(snapshot: Snapshot, viewModel: ReaderViewModel, onPicked: () -> Unit) {
     val (state, view) = snapshot
     val colors = ReaderTheme.colors
     val selectedKey = viewKey(state.selection)
     val sync by viewModel.syncUi.collectAsStateWithLifecycle()
+    val links = LocalUriHandler.current
     val footer: @Composable () -> Unit = {
         HorizontalDivider(Modifier.padding(horizontal = 28.dp, vertical = 8.dp), color = colors.line)
+        SidebarItem(
+            label = stringResource(R.string.contact_us),
+            count = 0,
+            selected = false,
+            icon = { tint -> Icon(Icons.Outlined.MailOutline, null, tint = tint) },
+            onClick = { links.openUri(SyncConfig.CONTACT_URL) },
+        )
         SidebarItem(
             label = syncStatusText(sync.report.status),
             count = 0,
@@ -83,7 +94,7 @@ fun Sidebar(snapshot: Snapshot, viewModel: ReaderViewModel, onPicked: () -> Unit
             },
         )
     }
-    // On a short screen, such as a phone on its side, sync and Add feed scroll with the list rather than squeezing it.
+    // On a short screen, such as a phone on its side, Contact us, sync and Add feed scroll with the list rather than squeezing it.
     BoxWithConstraints(Modifier.fillMaxHeight()) {
         val footerPinned = maxHeight >= PINNED_FOOTER_HEIGHT
         Column(

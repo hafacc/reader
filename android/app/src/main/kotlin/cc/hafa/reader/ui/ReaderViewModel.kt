@@ -6,6 +6,7 @@ import android.util.Log
 import androidx.annotation.PluralsRes
 import androidx.annotation.StringRes
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.AndroidViewModel
@@ -141,6 +142,9 @@ class ReaderViewModel(application: Application) : AndroidViewModel(application) 
     // Whether the account's data holds the loading screen: from opening and from signing in or replacing this device's data, until the screen lets the person in.
     private val accountAwaited = MutableStateFlow(true)
 
+    // Whether opening still waits for the checks of feeds past due; see ReaderModel.openChecks.
+    private val openingChecks = MutableStateFlow(true)
+
     private val mutableGate = MutableStateFlow(LoadGate.started(SystemClock.elapsedRealtime()))
 
     /** The loading screen, which holds the person while what can still change the lists loads. */
@@ -158,6 +162,13 @@ class ReaderViewModel(application: Application) : AndroidViewModel(application) 
     /** What the detail screen holds. */
     var detail by mutableStateOf(Detail.Article)
         private set
+
+    // Refreshes started here and not yet ended. The model's refreshing state reaches the list a few frames late,
+    // through the off-thread snapshot, and pull to refresh's indicator would spring back up meanwhile.
+    private var refreshesStarted by mutableIntStateOf(0)
+
+    /** Whether feeds are being checked, from the moment a refresh is asked for here. */
+    fun refreshing(state: ReaderState): Boolean = state.refreshing || refreshesStarted > 0
 
     private val preferences = application.readerApplication.preferences
 
@@ -177,10 +188,16 @@ class ReaderViewModel(application: Application) : AndroidViewModel(application) 
                 .collect { notify(Notice.Text(R.string.sync_error)) }
         }
         viewModelScope.launch(logFailures) {
-            model.openChecks()
+            try {
+                model.openChecks()
+            } finally {
+                openingChecks.value = false
+            }
         }
         viewModelScope.launch(logFailures) {
-            combine(model.state, syncUi, accountAwaited) { state, sync, awaited -> loadingBusy(state, sync.report, awaited) }
+            combine(model.state, syncUi, accountAwaited, openingChecks) { state, sync, awaited, opening ->
+                opening || loadingBusy(state, sync.report, awaited)
+            }
                 .distinctUntilChanged()
                 .collectLatest { busy ->
                     var wake = stepGate(busy)
@@ -341,13 +358,24 @@ class ReaderViewModel(application: Application) : AndroidViewModel(application) 
     /** Go to All items and check every feed. */
     fun goHome() {
         model.select(Selection.All)
-        viewModelScope.launch(logFailures) { model.refresh() }
+        startRefresh { model.refresh() }
         showList()
     }
 
     /** Check the feeds of the view on show. */
     fun refreshView() {
-        viewModelScope.launch(logFailures) { model.refreshView() }
+        startRefresh { model.refreshView() }
+    }
+
+    private fun startRefresh(refresh: suspend () -> Unit) {
+        refreshesStarted += 1
+        viewModelScope.launch(logFailures) {
+            try {
+                refresh()
+            } finally {
+                refreshesStarted -= 1
+            }
+        }
     }
 
     /**

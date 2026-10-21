@@ -52,6 +52,9 @@
   --color-danger: var(--danger);
   /* the account dot while syncing */
   --animate-dot: dot-pulse 1.4s ease-in-out infinite;
+  /* on a phone, a screen slides in over the list, and the list comes back up under it, as on Android */
+  --animate-screen-in: screen-in 300ms cubic-bezier(0.4, 0, 0.2, 1);
+  --animate-list-in: list-in 300ms cubic-bezier(0.4, 0, 0.2, 1);
   --color-faded: var(--read);
   --font-sans: "Public Sans Variable", ui-sans-serif, system-ui, sans-serif;
   --font-reading: var(--reading-font);
@@ -124,6 +127,19 @@ input,
 @keyframes appear {
   from {
     opacity: 0;
+  }
+}
+
+@keyframes screen-in {
+  from {
+    transform: translateX(100%);
+  }
+}
+
+@keyframes list-in {
+  from {
+    opacity: 0.4;
+    transform: scale(0.95);
   }
 }
 

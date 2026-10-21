@@ -15,6 +15,14 @@ fun loadingBusy(state: ReaderState, sync: SyncReport, awaited: Boolean): Boolean
     return !state.loaded || state.importing > 0 || (awaited && arriving)
 }
 
+/**
+ * Longest time, in milliseconds, the loading screen waits at opening for the
+ * checks of feeds past their due time; checks still running then go on
+ * behind it, and what they bring waits for the lists to be settled. The same
+ * as the web app's `OPENING_WAIT_MS`.
+ */
+const val OPENING_WAIT_MS = 1_000L
+
 /** What the loading screen shows. */
 enum class GatePhase {
     /** Nothing: the person is let in. */

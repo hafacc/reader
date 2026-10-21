@@ -27,4 +27,22 @@ class TopicRowsTest {
             wrappedRows(listOf(150, 20, 20), 100, 8),
         )
     }
+
+    @Test
+    fun `packed items each go at the end of the shortest row, the upper on a tie`() {
+        assertEquals(emptyList(), packedRows(emptyList(), 3, 8))
+        val packed = packedRows(listOf(50, 30, 30, 20, 10, 40), 3, 8)
+        assertEquals(
+            listOf(
+                RowPosition(0, 0),
+                RowPosition(1, 0),
+                RowPosition(2, 0),
+                RowPosition(1, 38),
+                RowPosition(2, 38),
+                RowPosition(2, 56),
+            ),
+            packed,
+        )
+        assertEquals(3, rowCount(packed))
+    }
 }

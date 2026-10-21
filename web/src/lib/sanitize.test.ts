@@ -7,7 +7,6 @@ import {
   mentionsUrl,
   plainBody,
   sanitize,
-  srcsetCandidates,
 } from "./sanitize.ts";
 
 const BASE = "https://blog.example/posts/2024/hello/";
@@ -72,15 +71,6 @@ describe("absoluteSrcset", () => {
       ),
     ).toBe("data:image/png;base64,AAAA 1x, https://pics.example/b.png 2x");
   });
-
-  test("candidates are read as the spec reads them", () => {
-    expect(srcsetCandidates(" a.png, b.png 2x,c.png 3x , d.png,")).toEqual([
-      { address: "a.png", descriptors: "" },
-      { address: "b.png", descriptors: "2x" },
-      { address: "c.png", descriptors: "3x" },
-      { address: "d.png", descriptors: "" },
-    ]);
-  });
 });
 
 describe("mentionsUrl", () => {
@@ -92,6 +82,16 @@ describe("mentionsUrl", () => {
     expect(mentionsUrl(`<img src="${address}">`, address)).toBe(true);
     expect(mentionsUrl("<p>text</p>", address)).toBe(false);
     expect(mentionsUrl("<p>text</p>", "")).toBe(false);
+  });
+
+  test("finds a lead picture stored as the body picture's largest candidate", () => {
+    const body = sanitize(
+      '<img width="300" src="/three-300.jpg" srcset="/three-300.jpg 300w, /three-1024.jpg 1024w">',
+      "https://pictures.example.com/wider-body",
+    );
+    expect(
+      mentionsUrl(body, "https://pictures.example.com/three-1024.jpg"),
+    ).toBe(true);
   });
 });
 
@@ -137,6 +137,22 @@ describe("sanitize", () => {
     expect(html).toContain('src="https://blog.example/posts/pic.png"');
     expect(html).toContain('srcset="https://blog.example/big.png 2x"');
     expect(html).toContain('referrerpolicy="no-referrer"');
+  });
+
+  test("keeps picture sources and sizes so the browser can pick a large picture", () => {
+    const html = sanitize(
+      '<picture><source type="image/webp" srcset="/big.webp 1600w, http://pics.example/small.webp 400w, javascript:alert(1) 800w" sizes="100vw"><img src="/small.jpg" srcset="/big.jpg 1600w" sizes="(max-width: 600px) 100vw, 600px"></picture>',
+      article,
+    );
+    expect(html).toContain("<picture><source");
+    expect(html).toContain(
+      'srcset="https://blog.example/big.webp 1600w, https://pics.example/small.webp 400w"',
+    );
+    expect(html).toContain('sizes="100vw"');
+    expect(html).toContain('srcset="https://blog.example/big.jpg 1600w"');
+    expect(html).toContain('sizes="(max-width: 600px) 100vw, 600px"');
+    expect(html).toContain('loading="lazy"');
+    expect(html).not.toContain("javascript");
   });
 
   test("shows a title or long alt text under its image", () => {

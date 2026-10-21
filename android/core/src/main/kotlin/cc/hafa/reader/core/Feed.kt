@@ -64,7 +64,14 @@ private val NAMED_ENTITIES = mapOf(
     "nbsp" to " ",
 )
 private const val MAX_CODE_POINT = 0x10FFFF
-private val IMAGE_PATTERN = Regex("<img\\b[^>]*?\\bsrc\\s*=\\s*[\"']([^\"']+)[\"']", RegexOption.IGNORE_CASE)
+private val IMAGE_TAG = Regex("<img\\b[^>]*>", RegexOption.IGNORE_CASE)
+
+// an attribute of an image tag the lead image is chosen from, its value quoted or bare
+private val IMAGE_ATTRIBUTE = Regex(
+    "[\\t\\n\\f\\r ](srcset|src|width)[\\t\\n\\f\\r ]*=[\\t\\n\\f\\r ]*(?:\"([^\"]*)\"|'([^']*)'|([^\\t\\n\\f\\r \"'>]+))",
+    RegexOption.IGNORE_CASE,
+)
+private val PIXELS = Regex("^\\d+$")
 
 private fun codePointOr(code: Long?, fallback: String): String =
     if (code != null && code > 0 && code <= MAX_CODE_POINT) {
@@ -139,10 +146,65 @@ private fun firstDate(node: Element, fields: List<String>): Long {
     return found
 }
 
-private fun firstImage(html: String, base: String): String {
-    val source = IMAGE_PATTERN.find(html)?.groupValues?.get(1)
-    return if (source.isNullOrEmpty()) "" else resolveWebAddress(decodeEntities(source), base)
+/** A picture that could lead an article, with its width in pixels when the feed says (else 0). */
+private data class LeadCandidate(val address: String, val size: CandidateSize)
+
+private val UNKNOWN_SIZE = CandidateSize(0.0, 1.0)
+
+private fun pixels(value: String): Double {
+    val trimmed = value.trim()
+    return if (PIXELS.matches(trimmed)) trimmed.toDouble() else 0.0
 }
+
+/**
+ * The lead picture among candidates in order of preference: the first, given
+ * up for a later one only when both widths are known and the later is wider.
+ */
+private fun widestLead(candidates: List<LeadCandidate>): String {
+    var chosen = LeadCandidate("", UNKNOWN_SIZE)
+    for (candidate in candidates) {
+        if (candidate.address.isNotEmpty() &&
+            (chosen.address.isEmpty() || (chosen.size.width > 0 && candidate.size.width > chosen.size.width))
+        ) {
+            chosen = candidate
+        }
+    }
+    return chosen.address
+}
+
+/**
+ * The first `img` of article HTML as a lead candidate: the largest of its
+ * `src` and `srcset` candidates (`width` turns densities into widths), the
+ * `src` winning ties.
+ */
+private fun firstImage(html: String, base: String): LeadCandidate {
+    val tag = IMAGE_TAG.find(html)?.value ?: ""
+    val attributes = mutableMapOf<String, String>()
+    for (match in IMAGE_ATTRIBUTE.findAll(tag)) {
+        val value = match.groups[2]?.value ?: match.groups[3]?.value ?: match.groups[4]?.value ?: ""
+        attributes.putIfAbsent(match.groupValues[1].lowercase(), decodeEntities(value))
+    }
+    val declaredWidth = pixels(attributes["width"] ?: "")
+    val source = attributes["src"] ?: ""
+    val resolvedSource = if (source.isEmpty()) "" else resolveWebAddress(source, base)
+    var largest = if (resolvedSource.isEmpty()) {
+        LeadCandidate("", UNKNOWN_SIZE)
+    } else {
+        LeadCandidate(resolvedSource, candidateSize("", declaredWidth))
+    }
+    for (candidate in srcsetCandidates(attributes["srcset"] ?: "")) {
+        val resolved = resolveWebAddress(candidate.address, base)
+        val size = candidateSize(candidate.descriptor, declaredWidth)
+        if (resolved.isNotEmpty() && (largest.address.isEmpty() || isLarger(size, largest.size))) {
+            largest = LeadCandidate(resolved, size)
+        }
+    }
+    return largest
+}
+
+/** The lead picture: the feed's own unless the body's first picture is known to be wider. */
+private fun leadImage(feedImages: List<LeadCandidate>, html: String, base: String): String =
+    widestLead(feedImages + firstImage(html, base))
 
 /** Text with common HTML entities decoded, as an attribute value reads in a browser. */
 fun decodeHtmlEntities(text: String): String = decodeEntities(text)
@@ -177,30 +239,32 @@ private fun atomLink(links: List<Element>, base: String): String = resolveWebAdd
 /** The Media RSS groups of an item, which YouTube and others put its picture and description in. */
 private fun mediaGroups(item: Element): List<Element> = childrenNamed(item, "group")
 
-private fun mediaImage(item: Element, base: String, depth: Int = 0): String {
-    var image = ""
-    for (thumbnail in childrenNamed(item, "thumbnail")) {
-        if (image.isEmpty() && thumbnail.hasAttr("url")) {
-            image = resolveWebAddress(attrOf(thumbnail, "url"), base)
-        }
+/** A Media RSS picture's address and declared width. */
+private fun mediaCandidate(node: Element, base: String): LeadCandidate =
+    LeadCandidate(
+        if (node.hasAttr("url")) resolveWebAddress(attrOf(node, "url"), base) else "",
+        CandidateSize(pixels(attrOf(node, "width")), 1.0),
+    )
+
+/**
+ * An item's pictures in order of preference: Media RSS image contents and
+ * image enclosures (the picture itself), then thumbnails, then those of its
+ * Media RSS groups.
+ */
+private fun mediaImages(item: Element, base: String, depth: Int = 0): List<LeadCandidate> {
+    val contents = childrenNamed(item, "content")
+        .filter { content -> "image" in attrOf(content, "medium") + attrOf(content, "type") }
+        .map { content -> mediaCandidate(content, base) }
+    val enclosures = childrenNamed(item, "enclosure")
+        .filter { enclosure -> attrOf(enclosure, "type").startsWith("image/") }
+        .map { enclosure -> mediaCandidate(enclosure, base).copy(size = UNKNOWN_SIZE) }
+    val thumbnails = childrenNamed(item, "thumbnail").map { thumbnail -> mediaCandidate(thumbnail, base) }
+    val groups = if (depth < MAX_TEXT_DEPTH) {
+        mediaGroups(item).flatMap { group -> mediaImages(group, base, depth + 1) }
+    } else {
+        emptyList()
     }
-    for (content in childrenNamed(item, "content")) {
-        val kind = attrOf(content, "medium") + attrOf(content, "type")
-        if (image.isEmpty() && content.hasAttr("url") && "image" in kind) {
-            image = resolveWebAddress(attrOf(content, "url"), base)
-        }
-    }
-    for (enclosure in childrenNamed(item, "enclosure")) {
-        if (image.isEmpty() && enclosure.hasAttr("url") && attrOf(enclosure, "type").startsWith("image/")) {
-            image = resolveWebAddress(attrOf(enclosure, "url"), base)
-        }
-    }
-    for (group in mediaGroups(item)) {
-        if (image.isEmpty() && depth < MAX_TEXT_DEPTH) {
-            image = mediaImage(group, base, depth + 1)
-        }
-    }
-    return image
+    return contents + enclosures + thumbnails + groups
 }
 
 /** An item's Media RSS description as a body and a summary; empty when it has none. */
@@ -240,7 +304,7 @@ private fun parseRssItem(item: Element, base: String): FeedEntry {
         url = link,
         published = published,
         author = displayText(childText(item, "creator").ifEmpty { childText(item, "author") }),
-        imageUrl = mediaImage(item, base).ifEmpty { firstImage(html, base) },
+        imageUrl = leadImage(mediaImages(item, base), html, base),
         summary = plainText(childText(item, "description")).ifEmpty { media.summary },
         categories = categoryNames(childrenNamed(item, "category")),
         html = html,
@@ -277,7 +341,7 @@ private fun parseAtomEntry(entry: Element, base: String): FeedEntry {
         url = link,
         published = published,
         author = if (author == null) "" else displayText(childText(author, "name")),
-        imageUrl = mediaImage(entry, base).ifEmpty { firstImage(html, base) },
+        imageUrl = leadImage(mediaImages(entry, base), html, base),
         summary = plainText(summary).ifEmpty { media.summary },
         categories = categoryNames(childrenNamed(entry, "category")),
         html = html,
@@ -354,7 +418,7 @@ private fun parseJsonFeed(source: JsonObject, base: String): ParsedFeed {
                 url = url,
                 published = published,
                 author = authors.firstOrNull()?.let { author -> jsonText(author["name"]) } ?: "",
-                imageUrl = resolveWebAddress(jsonText(item["image"]), base).ifEmpty { firstImage(html, base) },
+                imageUrl = leadImage(listOf(LeadCandidate(resolveWebAddress(jsonText(item["image"]), base), UNKNOWN_SIZE)), html, base),
                 summary = plainText(jsonText(item["summary"])),
                 categories = jsonList(item["tags"]).map { tag -> jsonText(tag) }.filter { tag -> tag.isNotEmpty() },
                 html = html,

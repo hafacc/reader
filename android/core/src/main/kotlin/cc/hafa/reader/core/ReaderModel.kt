@@ -24,6 +24,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import java.util.concurrent.ConcurrentHashMap
 import java.util.logging.Level
@@ -124,6 +125,9 @@ fun markedHttp(feed: Feed): Feed =
         feed
     }
 
+/** Time between checks of due feeds while the app is on screen, in milliseconds: as often as the extension's timer wakes. */
+const val DUE_CHECK_MS = 5 * 60_000L
+
 /** Shortest time the refreshing marks stay on, so a quick check is still seen. */
 private const val MIN_REFRESH_MS = 700L
 private const val MAX_DISCOVERY_TRIES = 12
@@ -185,6 +189,8 @@ private fun hostOf(address: String): String = address.toHttpUrlOrNull()?.host ?:
  *
  * [savingData] says whether the device asks to save data (Data Saver on
  * Android); then no neighbor's body is downloaded and no picture fetched ahead.
+ * [online] says whether the device has a network, so opening does not wait
+ * for checks that cannot answer.
  */
 class ReaderModel(
     private val store: ReaderStore,
@@ -196,6 +202,7 @@ class ReaderModel(
     private val minRefreshMillis: Long = MIN_REFRESH_MS,
     private val onBackgroundWork: () -> Unit = {},
     private val savingData: () -> Boolean = { false },
+    private val online: () -> Boolean = { true },
 ) {
     private val mutableState = MutableStateFlow(ReaderState())
 
@@ -204,7 +211,6 @@ class ReaderModel(
 
     private val loadLock = Mutex()
     private val writes = Channel<suspend () -> Unit>(Channel.UNLIMITED)
-    private val manual: MutableSet<String> = ConcurrentHashMap.newKeySet()
     private val iconsTried: MutableSet<String> = ConcurrentHashMap.newKeySet()
     // Plain http feeds tried over https since the reader started with a definite answer, or being tried, by id.
     private val httpTried: MutableSet<String> = ConcurrentHashMap.newKeySet()
@@ -361,7 +367,7 @@ class ReaderModel(
                 first.settings === second.settings && first.pinned === second.pinned &&
                 first.heldTopics === second.heldTopics && first.frozenRank === second.frozenRank &&
                 first.heldEntries === second.heldEntries && first.heldFeeds === second.heldFeeds &&
-                first.selection == second.selection && first.unreadOnly == second.unreadOnly &&
+                first.frozenList === second.frozenList && first.selection == second.selection && first.unreadOnly == second.unreadOnly &&
                 first.currentId == second.currentId
             )
 
@@ -374,7 +380,9 @@ class ReaderModel(
             if (before.currentId.isNotEmpty()) {
                 close()
             }
-            update { current -> current.copy(pinned = emptySet(), heldTopics = emptyMap(), heldEntries = current.heldEntries?.let { current.entryIds() }) }
+            update { current ->
+                current.copy(pinned = emptySet(), heldTopics = emptyMap(), heldEntries = current.heldEntries?.let { current.entryIds() }, frozenList = null)
+            }
         }
         preferences.lastView = viewKey(chosen)
     }
@@ -388,6 +396,7 @@ class ReaderModel(
                 heldTopics = emptyMap(),
                 heldEntries = current.heldEntries?.let { current.entryIds() },
                 heldFeeds = current.heldFeeds?.let { current.feedIds() },
+                frozenList = null,
             )
         }
         if (next && entryById(state.value.currentId)?.read == true) {
@@ -403,14 +412,15 @@ class ReaderModel(
      * worked out again.
      */
     fun settle() {
-        update { current ->
-            current.copy(
-                frozenRank = frozenRankOf(current.feeds, current.entries, current.settings),
-                heldEntries = current.entryIds(),
-                heldFeeds = current.feedIds(),
-            )
-        }
+        update { current -> current.settled() }
     }
+
+    /** This state with everything that has arrived let into the lists and the sidebar's order worked out again. */
+    private fun ReaderState.settled(): ReaderState = copy(
+        frozenRank = frozenRankOf(feeds, entries, settings),
+        heldEntries = entryIds(),
+        heldFeeds = feedIds(),
+    )
 
     private fun ReaderState.entryIds(): Set<String> = entries.mapTo(HashSet()) { entry -> entry.id }
 
@@ -592,12 +602,11 @@ class ReaderModel(
         toggleStarFor(state.value.currentId)
     }
 
-    /** Flip the read mark on the open entry; the choice sticks when the article is left. */
+    /** Flip the read mark the open entry shows; see [ReaderState.shownRead]. */
     fun toggleRead() {
         val entry = entryById(state.value.currentId)
         if (entry != null) {
-            manual.add(entry.id)
-            setRead(listOf(entry.id), !entry.read)
+            toggleOpenRead(entry)
         }
     }
 
@@ -617,9 +626,10 @@ class ReaderModel(
         val entry = entryById(id)
         if (entry != null) {
             if (id == state.value.currentId) {
-                manual.add(id)
+                toggleOpenRead(entry)
+            } else {
+                setRead(listOf(id), !entry.read)
             }
-            setRead(listOf(id), !entry.read)
         }
     }
 
@@ -628,12 +638,10 @@ class ReaderModel(
         val current = state.value
         val view = viewOf(current)
         val shown = view.visible.mapTo(HashSet()) { entry -> entry.id }
-        setRead(
-            view.baseEntries
-                .filter { entry -> !entry.read && (entry.id in shown || countedInView(current, entry)) }
-                .map { entry -> entry.id },
-            true,
-        )
+        val marked = view.baseEntries.filter { entry -> markedByMarkAllRead(current, shown, entry) }.map { entry -> entry.id }
+        if (marked.isNotEmpty()) {
+            setRead(marked, true)
+        }
     }
 
     /** Give a feed its own name; a blank name is ignored. */
@@ -749,8 +757,10 @@ class ReaderModel(
     /**
      * Check feeds now whatever their schedule says. With no ids, every feed.
      * Requests are still conditional, so unchanged feeds cost little. Read
-     * articles kept in the list go at once, and the sidebar order is worked
-     * out again when it ends.
+     * articles kept in the list go at once; then the list holds still (see
+     * [ReaderState.frozenList]) until the last refresh under way ends, when
+     * the lists take in everything that arrived, the sidebar order is worked
+     * out again and the list goes back to its top.
      */
     suspend fun refresh(feedIds: List<String> = emptyList()) {
         load()
@@ -762,13 +772,14 @@ class ReaderModel(
         if (open.unreadOnly && open.selection != Selection.Starred && entryById(open.currentId)?.read == true) {
             close()
         }
+        val frozen = FrozenList(viewKey(state.value.selection), view().visible.map { entry -> entry.id })
+        update { current -> if (current.frozenList == null) current.copy(frozenList = frozen) else current }
         if (state.value.feeds.any { feed -> isPlainHttp(feed.url) && feed.id !in httpTried }) {
             scope.launch { upgradeHttpFeeds() }
         }
         val started = clock()
         try {
             checkNow(feedIds)
-            settle()
         } finally {
             try {
                 val remaining = minRefreshMillis - (clock() - started)
@@ -776,7 +787,18 @@ class ReaderModel(
                     delay(remaining)
                 }
             } finally {
-                update { current -> current.copy(refreshCount = current.refreshCount - 1) }
+                update { current ->
+                    val left = current.refreshCount - 1
+                    if (left > 0) {
+                        current.copy(refreshCount = left)
+                    } else {
+                        current.settled().copy(
+                            refreshCount = 0,
+                            frozenList = null,
+                            refreshesEnded = current.refreshesEnded + 1,
+                        )
+                    }
+                }
             }
         }
     }
@@ -816,19 +838,53 @@ class ReaderModel(
     }
 
     /**
-     * Start the checks the app makes when it opens, without waiting for them:
-     * load, try plain http feeds over https, and queue the feeds whose schedule
-     * says they are due. Nothing shows as refreshing, the list keeps its rows
-     * and the sidebar keeps the order worked out at load.
+     * Start the checks the app makes when it opens: load, try plain http
+     * feeds over https, and queue a check of every feed, those past their due
+     * time first and waited for, the rest after, likelier ones first. Returns
+     * once the feeds past due are saved or [waitMs] has passed, whichever is
+     * first, and at once when the device is offline; the other checks go on in
+     * the background. Nothing shows as refreshing, the list keeps its rows and
+     * the sidebar keeps the order worked out at load.
      */
-    suspend fun openChecks() {
+    suspend fun openChecks(waitMs: Long = OPENING_WAIT_MS) {
         load()
         if (state.value.feeds.any { feed -> isPlainHttp(feed.url) && feed.id !in httpTried }) {
             scope.launch { upgradeHttpFeeds() }
         }
-        queue.enqueue(dueRequests(clock()))
+        val now = clock()
+        // a plain http feed is never fetched; its https address is tried apart from the schedule
+        val requests = state.value.feeds
+            .filter { feed -> !isPlainHttp(feed.url) }
+            .map { feed ->
+                CheckRequest(
+                    feed.id,
+                    refreshProbability(feed.schedule, now),
+                    foreground = feed.schedule.nextFetch <= now,
+                    timeoutMs = FETCH_TIMEOUT_MS,
+                )
+            }
+        val checks = queue.enqueue(requests)
         if (queue.busy()) {
             onBackgroundWork()
+        }
+        if (online()) {
+            withTimeoutOrNull(waitMs) {
+                checks.filter { (_, request) -> request.foreground }.forEach { (check, _) -> check.stored.await() }
+            }
+        }
+    }
+
+    /**
+     * Queue background checks of the feeds whose schedule says they are due,
+     * without waiting for them, as the extension's timer does while the web
+     * app is open; nothing before the stored data is loaded.
+     */
+    suspend fun queueDue() {
+        if (state.value.loaded) {
+            queue.enqueue(dueRequests(clock()))
+            if (queue.busy()) {
+                onBackgroundWork()
+            }
         }
     }
 
@@ -1185,10 +1241,38 @@ class ReaderModel(
 
     private fun leave(id: String) {
         val entry = entryById(id)
-        if (entry != null && !(entry.read || id in manual)) {
+        if (entry != null && !(entry.read || id in state.value.keptUnread)) {
             setRead(listOf(id), true)
         }
-        manual.remove(id)
+        keepUnread(id, false)
+    }
+
+    /**
+     * Flip the read mark the open entry shows. An unread one waiting to be
+     * marked read on leaving stops waiting and saves nothing; one that has
+     * stopped is marked read now; a read one is marked unread and stays so on
+     * leaving.
+     */
+    private fun toggleOpenRead(entry: Entry) {
+        if (entry.read) {
+            keepUnread(entry.id, true)
+            setRead(listOf(entry.id), false)
+        } else if (entry.id in state.value.keptUnread) {
+            keepUnread(entry.id, false)
+            setRead(listOf(entry.id), true)
+        } else {
+            keepUnread(entry.id, true)
+        }
+    }
+
+    private fun keepUnread(id: String, kept: Boolean) {
+        update { current ->
+            when {
+                (id in current.keptUnread) == kept -> current
+                kept -> current.copy(keptUnread = current.keptUnread + id)
+                else -> current.copy(keptUnread = current.keptUnread - id)
+            }
+        }
     }
 
     private fun setRead(ids: List<String>, read: Boolean) {
@@ -1270,9 +1354,9 @@ class ReaderModel(
 
     /** Remove every feed, entry, body, setting and tombstone on this device. */
     private suspend fun clearLocal() {
-        manual.clear()
         update { current ->
             current.copy(
+                keptUnread = emptySet(),
                 feeds = emptyList(),
                 entries = emptyList(),
                 settings = emptyMap(),
@@ -1288,6 +1372,7 @@ class ReaderModel(
                 frozenRank = emptyMap(),
                 heldEntries = null,
                 heldFeeds = null,
+                frozenList = null,
             )
         }
         persist { store.clear() }
@@ -1297,7 +1382,15 @@ class ReaderModel(
 
     /** Fetch and judge one feed; null when the fetch ran out of a time shorter than the full one. */
     private suspend fun checkFeed(feed: Feed, timeoutMs: Long): FinishedCheck? {
-        val outcome = fetcher.fetch(feed.url, feed.schedule.etag, feed.schedule.lastModified, timeoutMs)
+        val outcome = try {
+            fetcher.fetch(feed.url, feed.schedule.etag, feed.schedule.lastModified, timeoutMs)
+        } catch (cancelled: CancellationException) {
+            throw cancelled
+        } catch (failure: Exception) {
+            // Counted as no answer, as the extension counts any fetch that throws, so the feed backs off and shows its problem.
+            logger.log(Level.WARNING, "fetching a feed failed", failure)
+            FetchOutcome(status = 0)
+        }
         return if (outcome.timedOut && timeoutMs < FETCH_TIMEOUT_MS) {
             null
         } else {
