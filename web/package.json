@@ -1,6 +1,6 @@
 {
   "private": true,
-  "name": "h-reader-web",
+  "name": "reader-web",
   "version": "0.1.0",
   "description": "A simple local RSS reader with optional sync.",
   "license": "MIT",

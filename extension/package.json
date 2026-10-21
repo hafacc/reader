@@ -1,6 +1,6 @@
 {
   "private": true,
-  "name": "h-reader-extension",
+  "name": "reader-extension",
   "version": "0.1.0",
   "description": "A simple local RSS reader with optional sync.",
   "license": "MIT",
