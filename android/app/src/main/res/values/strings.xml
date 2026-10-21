@@ -49,6 +49,9 @@
     <string name="remove_rule">Remove %1$s</string>
     <string name="filter_hint">Words match whole words in the title or summary, ignoring capitals and spacing.</string>
     <string name="topics">Topics</string>
+    <string name="sections">Sections</string>
+    <string name="filters">Filters</string>
+    <string name="filters_some_off">Filters, some turned off</string>
     <string name="first_sign_in_line">Already use Reader?</string>
     <string name="first_sign_in">Sign in to sync your feeds</string>
     <string name="retention_label">Keep synced articles</string>
@@ -60,7 +63,7 @@
     <string name="refresh">Refresh</string>
     <!-- Said by the dot on the logo when feeds are overdue for a check. -->
     <string name="refresh_suggested">Some feeds are due for a check</string>
-    <string name="topics_hint">Select a topic to turn it off. Articles with only turned-off topics are hidden.</string>
+    <string name="filters_hint">Select a section or topic to turn it off. Articles in a turned-off section, or whose topics are all turned off, are hidden.</string>
     <string name="name_label">Name</string>
     <string name="group_label">Group</string>
     <string name="no_group">No group</string>

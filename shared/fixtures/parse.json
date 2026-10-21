@@ -19,6 +19,8 @@
             "imageUrl": "https://i1.ytimg.com/vi/abcDEF12345/hqdefault.jpg",
             "summary": "Today we build a birdhouse. Tools <cheap> & simple. Chapters: 0:00 Intro",
             "categories": [],
+            "categorySchemes": [],
+            "sourceUrl": "",
             "html": "Today we build a birdhouse.<br>Tools &lt;cheap&gt; &amp; simple.<br><br>Chapters:<br>0:00 Intro"
           },
           {
@@ -30,6 +32,8 @@
             "imageUrl": "https://i2.ytimg.com/vi/zyx98765432/hqdefault.jpg",
             "summary": "",
             "categories": [],
+            "categorySchemes": [],
+            "sourceUrl": "",
             "html": ""
           }
         ]
@@ -54,6 +58,8 @@
             "imageUrl": "https://photos.example.org/7.jpg",
             "summary": "Boats leaving early.",
             "categories": [],
+            "categorySchemes": [],
+            "sourceUrl": "",
             "html": "<p>The <b>full</b> story.</p>"
           }
         ]
@@ -78,6 +84,8 @@
             "imageUrl": "https://i.example.com/one-460.jpg",
             "summary": "",
             "categories": [],
+            "categorySchemes": [],
+            "sourceUrl": "",
             "html": ""
           },
           {
@@ -89,6 +97,8 @@
             "imageUrl": "https://i.example.com/two.jpg",
             "summary": "",
             "categories": [],
+            "categorySchemes": [],
+            "sourceUrl": "",
             "html": ""
           },
           {
@@ -100,6 +110,8 @@
             "imageUrl": "https://pictures.example.com/three-1024.jpg",
             "summary": "",
             "categories": [],
+            "categorySchemes": [],
+            "sourceUrl": "",
             "html": "<p><img width=\"300\" src=\"/three-300.jpg\" srcset=\"/three-300.jpg 300w, /three-1024.jpg 1024w\" sizes=\"(max-width: 300px) 100vw, 300px\"></p>"
           },
           {
@@ -111,6 +123,8 @@
             "imageUrl": "https://pictures.example.com/four@2x.jpg",
             "summary": "",
             "categories": [],
+            "categorySchemes": [],
+            "sourceUrl": "",
             "html": "<img data-src=\"/lazy.jpg\" src='/four.jpg' srcset='/four@2x.jpg 2x' width=200>"
           },
           {
@@ -122,6 +136,8 @@
             "imageUrl": "https://cdn.example.com/five.jpg?w=800&q=80",
             "summary": "",
             "categories": [],
+            "categorySchemes": [],
+            "sourceUrl": "",
             "html": "<img srcset=\"http://cdn.example.com/five.jpg?w=800&amp;q=80 800w, data:image/png;base64,AAAA 2000w\">"
           },
           {
@@ -133,6 +149,8 @@
             "imageUrl": "https://i.example.com/six.jpg",
             "summary": "",
             "categories": [],
+            "categorySchemes": [],
+            "sourceUrl": "",
             "html": "<img src=\"/six-body.jpg\" width=\"1200\">"
           },
           {
@@ -144,6 +162,8 @@
             "imageUrl": "https://i.example.com/seven-480.jpg",
             "summary": "",
             "categories": [],
+            "categorySchemes": [],
+            "sourceUrl": "",
             "html": ""
           },
           {
@@ -155,7 +175,88 @@
             "imageUrl": "https://pictures.example.com/eight-1600.jpg",
             "summary": "",
             "categories": [],
+            "categorySchemes": [],
+            "sourceUrl": "",
             "html": "<img srcset=\"/eight-1600.jpg 1600w, /eight-400.jpg 400w\">"
+          }
+        ]
+      }
+    },
+    {
+      "input": {
+        "file": "rss.xml",
+        "feedUrl": "https://example.com/rss"
+      },
+      "output": {
+        "title": "Example Blog",
+        "siteUrl": "https://example.com/",
+        "iconUrl": "https://example.com/icon.png",
+        "entries": [
+          {
+            "guid": "post-1",
+            "title": "First post",
+            "url": "https://example.com/posts/first",
+            "published": 1791278040000,
+            "author": "Ada",
+            "imageUrl": "https://example.com/img/a.png",
+            "summary": "Short & sweet summary",
+            "categories": [
+              "Elections",
+              "World",
+              "World"
+            ],
+            "categorySchemes": [
+              "http://www.nytimes.com/namespaces/keywords/des",
+              "",
+              "http://www.nytimes.com/namespaces/keywords/nyt_geo"
+            ],
+            "sourceUrl": "",
+            "html": "<p>Full <b>body</b></p><img src=\"/img/a.png\">"
+          },
+          {
+            "guid": "https://example.com/posts/second",
+            "title": "Second post",
+            "url": "https://example.com/posts/second",
+            "published": 0,
+            "author": "",
+            "imageUrl": "https://example.com/thumb.jpg",
+            "summary": "Only a summary",
+            "categories": [],
+            "categorySchemes": [],
+            "sourceUrl": "https://news.example.net/world/story",
+            "html": "Only a summary"
+          }
+        ]
+      }
+    },
+    {
+      "input": {
+        "file": "atom.xml",
+        "feedUrl": "https://atom.example.org/feed.xml"
+      },
+      "output": {
+        "title": "Atom Example",
+        "siteUrl": "https://atom.example.org/",
+        "iconUrl": "https://atom.example.org/atom.ico",
+        "entries": [
+          {
+            "guid": "tag:atom.example.org,2026:1",
+            "title": "Hello Atom",
+            "url": "https://atom.example.org/entries/1",
+            "published": 1791187200000,
+            "author": "Grace",
+            "imageUrl": "",
+            "summary": "",
+            "categories": [
+              "Science",
+              "Notes"
+            ],
+            "categorySchemes": [
+              "https://atom.example.org/subjects",
+              ""
+            ],
+            "sourceUrl": "",
+            "html": "<p>Hello</p>"
           }
         ]
       }

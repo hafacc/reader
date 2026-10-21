@@ -753,6 +753,45 @@ describe("topics", () => {
     expect(reader.visible.map((entry) => entry.id)).toEqual(["b"]);
   });
 
+  test("a section turned off hides its articles, and its parent comes back with a child", async () => {
+    const reader = makeReader([
+      article("a", { url: "https://www.example.com/us/politics/a.html" }),
+      article("b", { url: "https://www.example.com/us/politics/b.html" }),
+      article("c", { url: "https://www.example.com/us/c.html" }),
+      article("d", { url: "https://www.example.com/world/d.html" }),
+      article("e", { url: "https://www.example.com/world/e.html" }),
+    ]);
+    reader.select({ kind: "feed", id: "feed-1" });
+    expect(reader.sections.map(({ label, count }) => [label, count])).toEqual([
+      ["us", 3],
+      ["us/politics", 2],
+      ["world", 2],
+    ]);
+    const open = reader.entries.find((entry) => entry.id === "a");
+    const filters = open && reader.articleFilters(open);
+    expect(filters?.sections.map(({ place }) => place)).toEqual([
+      "example.com/us",
+      "example.com/us/politics",
+    ]);
+    await reader.toggleSection("example.com/us", false);
+    expect(reader.viewSettings.offTopics).toEqual(["section:example.com/us"]);
+    expect(reader.sectionOff("example.com/us/politics")).toBe(true);
+    expect(filters && reader.filtersOff(filters)).toBe(true);
+    expect(reader.visible.map((entry) => entry.id).sort()).toEqual(["d", "e"]);
+    await reader.toggleSection("example.com/us/politics", false);
+    expect(reader.viewSettings.offTopics).toEqual([]);
+  });
+
+  test("in Starred an article has no filters", () => {
+    const reader = makeReader([article("a", { starred: true })]);
+    reader.select({ kind: "starred" });
+    const [open] = reader.entries;
+    expect(open && reader.articleFilters(open)).toEqual({
+      sections: [],
+      topics: [],
+    });
+  });
+
   test("a topic turned off in the settings panel applies at once", async () => {
     const reader = makeReader([
       article("a", { categories: ["Rust"] }),

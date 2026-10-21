@@ -85,7 +85,12 @@ describe("subscriptions", () => {
 
 describe("entries", () => {
   test("round trip", () => {
-    const entry = sampleEntry({ bodyHash: "abc", starred: true });
+    const entry = sampleEntry({
+      bodyHash: "abc",
+      starred: true,
+      categorySchemes: ["https://example.com/subjects"],
+      sourceUrl: "https://news.example.net/",
+    });
     const document = entryDocument(entry);
     expect(document.expireAt).toBeUndefined();
     expect(Object.values(document)).not.toContain(undefined);
@@ -107,6 +112,9 @@ describe("entries", () => {
       published: Number.NaN,
     });
     expect(parsed?.categories).toEqual(["ok"]);
+    // an older client's entry has no schemes or source
+    expect(parsed?.categorySchemes).toEqual([]);
+    expect(parsed?.sourceUrl).toBe("");
     expect(parsed?.read).toBe(false);
     expect(parsed?.published).toBe(0);
     expect(parsed?.dated).toBe(false);

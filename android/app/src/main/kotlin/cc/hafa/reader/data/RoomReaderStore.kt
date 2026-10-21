@@ -81,6 +81,8 @@ private fun Entry.toRecord() = EntryRecord(
     position = position,
     bodyHash = bodyHash,
     updatedAt = updatedAt,
+    categorySchemes = categorySchemes,
+    sourceUrl = sourceUrl,
 )
 
 private fun EntryRecord.toEntry() = Entry(
@@ -102,6 +104,8 @@ private fun EntryRecord.toEntry() = Entry(
     position = position,
     bodyHash = bodyHash,
     updatedAt = updatedAt,
+    categorySchemes = categorySchemes,
+    sourceUrl = sourceUrl,
 )
 
 /** The reader's storage in its Room database. */

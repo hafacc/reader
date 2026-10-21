@@ -25,6 +25,13 @@ export interface FeedEntry {
   summary: string;
   /** Sections, topics and tags the feed lists for the article. */
   categories: string[];
+  /**
+   * The scheme of each of `categories` (RSS `domain`, Atom `scheme`), at the
+   * same index; empty for none. Missing from older extensions.
+   */
+  categorySchemes?: string[];
+  /** Address of the story's source (RSS `<source url>`); empty for none. Missing from older extensions. */
+  sourceUrl?: string;
   /** Article body as HTML, not yet sanitized. */
   html: string;
 }
@@ -175,17 +182,35 @@ function plainText(html: string): string {
     .trim();
 }
 
-function categoryNames(values: unknown[]): string[] {
-  const names: string[] = [];
+/** An article's categories and the scheme of each, at the same index. */
+interface Categories {
+  categories: string[];
+  categorySchemes: string[];
+}
+
+/** Category names with their schemes, from the attribute that names the scheme; each pair once. */
+function categoryNames(values: unknown[], schemeAttribute: string): Categories {
+  const result: Categories = { categories: [], categorySchemes: [] };
+  const seen = new Set<string>();
   for (const value of values) {
     const name = isNode(value)
       ? displayText(value["@_term"]) || displayText(value)
       : displayText(value);
-    if (name && !names.includes(name)) {
-      names.push(name);
+    const scheme = isNode(value) ? text(value[schemeAttribute]) : "";
+    const pair = `${scheme}\n${name}`;
+    if (name !== "" && !seen.has(pair)) {
+      seen.add(pair);
+      result.categories.push(name);
+      result.categorySchemes.push(scheme);
     }
   }
-  return names;
+  return result;
+}
+
+/** The address an RSS item's `<source>` names; empty for none. */
+function sourceAddress(item: Node, base: string): string {
+  const source = list(item.source).find(isNode);
+  return upgradedAddress(text(source?.["@_url"]), base);
 }
 
 const ZONE_OFFSETS = new Map([
@@ -441,7 +466,8 @@ function parseRssItem(item: Node, base: string): FeedEntry {
     author: displayText(item.creator) || displayText(item.author),
     imageUrl: leadImage(mediaImages(item, base), html, base),
     summary: plainText(text(item.description)) || media.summary,
-    categories: categoryNames(list(item.category)),
+    ...categoryNames(list(item.category), "@_domain"),
+    sourceUrl: sourceAddress(item, base),
     html,
   };
 }
@@ -469,7 +495,8 @@ function parseAtomEntry(entry: Node, base: string): FeedEntry {
     author: author ? displayText(author.name) : "",
     imageUrl: leadImage(mediaImages(entry, base), html, base),
     summary: plainText(text(entry.summary)) || media.summary,
-    categories: categoryNames(list(entry.category)),
+    ...categoryNames(list(entry.category), "@_scheme"),
+    sourceUrl: "",
     html,
   };
 }
@@ -494,6 +521,9 @@ function parseJsonFeed(source: Node, base: string): ParsedFeed {
     const title = text(item.title);
     const published = firstDate(item, ["date_published", "date_modified"]);
     const authors = list(item.authors).filter(isNode);
+    const tags = list(item.tags)
+      .map((tag) => text(tag))
+      .filter(Boolean);
     entries.push({
       guid: text(item.id) || url || title,
       title: title || url,
@@ -511,9 +541,9 @@ function parseJsonFeed(source: Node, base: string): ParsedFeed {
         base,
       ),
       summary: plainText(text(item.summary)),
-      categories: list(item.tags)
-        .map((tag) => text(tag))
-        .filter(Boolean),
+      categories: tags,
+      categorySchemes: tags.map(() => ""),
+      sourceUrl: "",
       html,
     });
   }

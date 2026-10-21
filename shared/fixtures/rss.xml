@@ -13,6 +13,8 @@
       <description>Short &amp; sweet &lt;b&gt;summary&lt;/b&gt;</description>
       <category domain="http://www.nytimes.com/namespaces/keywords/des">Elections</category>
       <category>World</category>
+      <category domain="http://www.nytimes.com/namespaces/keywords/nyt_geo">World</category>
+      <category domain="http://www.nytimes.com/namespaces/keywords/des">Elections</category>
       <content:encoded><![CDATA[<p>Full <b>body</b></p><img src="/img/a.png">]]></content:encoded>
     </item>
     <item>
@@ -20,6 +22,7 @@
       <link>https://example.com/posts/second</link>
       <media:thumbnail url="https://example.com/thumb.jpg"/>
       <description>Only a summary</description>
+      <source url="http://news.example.net/world/story">Example News</source>
     </item>
   </channel>
 </rss>

@@ -26,13 +26,20 @@ class FeedTest {
         assertEquals("https://example.com/posts/first", first.url)
         assertEquals("Ada", first.author)
         assertEquals("Short & sweet summary", first.summary)
-        assertEquals(listOf("Elections", "World"), first.categories)
+        // a topic under two schemes is kept with each, and each pair once
+        assertEquals(listOf("Elections", "World", "World"), first.categories)
+        assertEquals(
+            listOf("http://www.nytimes.com/namespaces/keywords/des", "", "http://www.nytimes.com/namespaces/keywords/nyt_geo"),
+            first.categorySchemes,
+        )
+        assertEquals("", first.sourceUrl)
         assertEquals(millis("2026-10-06T09:14:00Z"), first.published)
         assertContains(first.html, "Full <b>body</b>")
         assertEquals("https://example.com/img/a.png", first.imageUrl)
         assertEquals("https://example.com/posts/second", second.guid)
         assertEquals("https://example.com/thumb.jpg", second.imageUrl)
         assertEquals(0L, second.published)
+        assertEquals("https://news.example.net/world/story", second.sourceUrl)
     }
 
     @Test

@@ -42,6 +42,8 @@ class SharedFixtureTest {
                         summary = entry.text("summary"),
                         categories = entry.getValue("categories").jsonArray.map { category -> category.jsonPrimitive.content },
                         html = entry.text("html"),
+                        categorySchemes = entry.getValue("categorySchemes").jsonArray.map { scheme -> scheme.jsonPrimitive.content },
+                        sourceUrl = entry.text("sourceUrl"),
                     )
                 },
             )

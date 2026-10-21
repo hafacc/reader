@@ -252,6 +252,10 @@ export interface EntryDocument {
   summary: string;
   /** Topics the feed lists. */
   categories: string[];
+  /** The scheme of each topic at the same index; empty for none. Missing from older clients' documents. */
+  categorySchemes: string[];
+  /** Address of the story's source; empty for none. Missing from older clients' documents. */
+  sourceUrl: string;
   /** Hash of the shared body; empty when unknown. */
   bodyHash: string;
   /** Whether it has been read. */
@@ -358,6 +362,10 @@ export function entryDocument(
     excerpt: cutText(entry.excerpt, FIELD_LIMITS.excerpt),
     summary: cutText(entry.summary, FIELD_LIMITS.summary),
     categories: entry.categories.slice(0, FIELD_LIMITS.categories),
+    categorySchemes: entry.categorySchemes
+      .slice(0, FIELD_LIMITS.categories)
+      .map(fitAddress),
+    sourceUrl: fitAddress(entry.sourceUrl),
     bodyHash: entry.bodyHash,
     read: entry.read,
     starred: entry.starred,
@@ -386,6 +394,8 @@ export function entryFromDocument(id: string, stored: EntryDocument): Entry {
     excerpt: stored.excerpt,
     summary: stored.summary,
     categories: [...stored.categories],
+    categorySchemes: [...stored.categorySchemes],
+    sourceUrl: stored.sourceUrl,
     read: stored.read,
     starred: stored.starred,
     addedAt: stored.addedAt,
@@ -495,6 +505,8 @@ export function parseEntry(fields: Fields): EntryDocument | undefined {
       excerpt: text(fields, "excerpt"),
       summary: text(fields, "summary"),
       categories: texts(fields, "categories"),
+      categorySchemes: texts(fields, "categorySchemes"),
+      sourceUrl: upgradedAddress(text(fields, "sourceUrl")),
       bodyHash: text(fields, "bodyHash"),
       read: flag(fields, "read"),
       starred: flag(fields, "starred"),

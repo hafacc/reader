@@ -16,13 +16,21 @@ test("parses RSS 2.0 with content, media and relative links", async () => {
   expect(first?.url).toBe("https://example.com/posts/first");
   expect(first?.author).toBe("Ada");
   expect(first?.summary).toBe("Short & sweet summary");
-  expect(first?.categories).toEqual(["Elections", "World"]);
+  // a topic under two schemes is kept with each, and each pair once
+  expect(first?.categories).toEqual(["Elections", "World", "World"]);
+  expect(first?.categorySchemes).toEqual([
+    "http://www.nytimes.com/namespaces/keywords/des",
+    "",
+    "http://www.nytimes.com/namespaces/keywords/nyt_geo",
+  ]);
+  expect(first?.sourceUrl).toBe("");
   expect(first?.published).toBe(Date.parse("2026-10-06T09:14:00Z"));
   expect(first?.html).toContain("Full <b>body</b>");
   expect(first?.imageUrl).toBe("https://example.com/img/a.png");
   expect(second?.guid).toBe("https://example.com/posts/second");
   expect(second?.imageUrl).toBe("https://example.com/thumb.jpg");
   expect(second?.published).toBe(0);
+  expect(second?.sourceUrl).toBe("https://news.example.net/world/story");
 });
 
 test("parses Atom", async () => {

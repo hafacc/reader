@@ -11,6 +11,8 @@
     <published>2026-10-05T08:00:00Z</published>
     <updated>2026-10-05T09:00:00Z</updated>
     <author><name>Grace</name></author>
+    <category term="Science" scheme="https://atom.example.org/subjects"/>
+    <category term="Notes"/>
     <content type="html">&lt;p&gt;Hello&lt;/p&gt;</content>
   </entry>
 </feed>

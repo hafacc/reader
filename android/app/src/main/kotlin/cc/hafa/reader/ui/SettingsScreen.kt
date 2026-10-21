@@ -50,6 +50,7 @@ import cc.hafa.reader.core.Selection
 import cc.hafa.reader.core.Sort
 import cc.hafa.reader.core.byCount
 import cc.hafa.reader.core.knownWordCounts
+import cc.hafa.reader.core.sectionOff
 import cc.hafa.reader.core.topicOff
 import cc.hafa.reader.core.wordCounts
 import kotlinx.coroutines.Dispatchers
@@ -58,7 +59,7 @@ import kotlinx.coroutines.withContext
 /** Which list of words the field adds to. */
 private enum class WordMode { Hide, Only }
 
-/** The current view's settings: name, sort, words, topics, and the feed's group or the group's removal. */
+/** The current view's settings: name, sort, words, sections and topics, and the feed's group or the group's removal. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(snapshot: Snapshot, viewModel: ReaderViewModel) {
@@ -181,18 +182,25 @@ fun SettingsScreen(snapshot: Snapshot, viewModel: ReaderViewModel) {
                 }
             }
 
-            if (selection != Selection.Starred && view.topicOrder.counts.isNotEmpty()) {
+            val filters = view.filters
+            if (selection != Selection.Starred && (filters.sections.isNotEmpty() || filters.groupOrder.groups.isNotEmpty())) {
                 Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Text(stringResource(R.string.topics), fontSize = 14.sp, lineHeight = 20.sp, fontWeight = FontWeight.Medium)
-                    ChipRows(view.topicOrder.counts) { item ->
-                        TopicChip(
-                            item.topic,
-                            off = topicOff(settings, item.topic),
-                            onToggle = { model.toggleTopic(item.topic, fromArticle = false) },
-                            count = item.count,
-                        )
-                    }
-                    Text(stringResource(R.string.topics_hint), fontSize = 12.sp, lineHeight = 16.sp, color = colors.muted)
+                    Text(stringResource(R.string.filters), fontSize = 14.sp, lineHeight = 20.sp, fontWeight = FontWeight.Medium)
+                    FilterRows(
+                        sections = filters.sections.map { section ->
+                            FilterChipItem(section.place, section.label, section.count, sectionOff(settings.offTopics, section.place)) {
+                                model.toggleSection(section.place, fromArticle = false)
+                            }
+                        },
+                        topics = filters.groupOrder.groups.map { group ->
+                            group.map { item ->
+                                FilterChipItem(item.topic.trim().lowercase(), item.topic, item.count, topicOff(settings, item.topic)) {
+                                    model.toggleTopic(item.topic, fromArticle = false)
+                                }
+                            }
+                        },
+                    )
+                    Text(stringResource(R.string.filters_hint), fontSize = 12.sp, lineHeight = 16.sp, color = colors.muted)
                 }
             }
 

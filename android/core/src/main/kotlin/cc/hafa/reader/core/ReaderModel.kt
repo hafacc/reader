@@ -477,6 +477,25 @@ class ReaderModel(
      * screen everything takes effect at once.
      */
     fun toggleTopic(topic: String, fromArticle: Boolean) {
+        changeOffTopics(fromArticle) { offTopics ->
+            if (topicOff(ViewSettings(offTopics = offTopics), topic)) {
+                offTopics.filter { known -> !known.equals(topic, ignoreCase = true) }
+            } else {
+                offTopics + topic
+            }
+        }
+    }
+
+    /**
+     * Turn a section off, with every section under it, or back on, with every
+     * section above it, in the current view; from an article the list holds
+     * as it does for a topic.
+     */
+    fun toggleSection(place: String, fromArticle: Boolean) {
+        changeOffTopics(fromArticle) { offTopics -> toggledSection(offTopics, place) }
+    }
+
+    private fun changeOffTopics(fromArticle: Boolean, change: (List<String>) -> List<String>) {
         val key = viewKey(state.value.selection)
         val before = state.value.settings[key] ?: DEFAULT_SETTINGS
         update { current ->
@@ -488,16 +507,7 @@ class ReaderModel(
                 },
             )
         }
-        val wasOff = topicOff(before, topic)
-        changeSettings { current ->
-            current.copy(
-                offTopics = if (wasOff) {
-                    current.offTopics.filter { known -> !known.equals(topic, ignoreCase = true) }
-                } else {
-                    current.offTopics + topic
-                },
-            )
-        }
+        changeSettings { current -> current.copy(offTopics = change(current.offTopics)) }
     }
 
     /**
@@ -1518,6 +1528,8 @@ class ReaderModel(
                         excerpt = item.summary.ifEmpty { excerpt(item.html) },
                         summary = item.summary,
                         categories = item.categories,
+                        categorySchemes = item.categorySchemes,
+                        sourceUrl = item.sourceUrl,
                         read = false,
                         starred = false,
                         addedAt = now,

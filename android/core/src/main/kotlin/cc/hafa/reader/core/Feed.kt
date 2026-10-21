@@ -34,6 +34,10 @@ data class FeedEntry(
     val categories: List<String>,
     /** Article body as HTML, not yet sanitized. */
     val html: String,
+    /** The scheme of each of [categories] (RSS `domain`, Atom `scheme`), at the same index; empty for none. */
+    val categorySchemes: List<String> = categories.map { "" },
+    /** Address of the story's source (RSS `<source url>`); empty for none. */
+    val sourceUrl: String = "",
 )
 
 /** A feed's own details and its current entries. */
@@ -215,16 +219,24 @@ private fun decodeEntities(text: String): String =
         .replace(HEX_PATTERN) { match -> codePointOr(match.groupValues[1].toLongOrNull(16), match.value) }
         .replace(NAMED_PATTERN) { match -> NAMED_ENTITIES[match.groupValues[1].lowercase()] ?: match.value }
 
-private fun categoryNames(elements: List<Element>): List<String> {
-    val names = mutableListOf<String>()
+/** An article's categories and the scheme of each, at the same index. */
+private data class Categories(val names: List<String>, val schemes: List<String>)
+
+/** Category names with their schemes, from the attribute that names the scheme; each pair once. */
+private fun categoryNames(elements: List<Element>, schemeAttribute: String): Categories {
+    val pairs = LinkedHashSet<Pair<String, String>>()
     for (element in elements) {
         val name = displayText(attrOf(element, "term").trim().ifEmpty { textOf(element) })
-        if (name.isNotEmpty() && name !in names) {
-            names.add(name)
+        if (name.isNotEmpty()) {
+            pairs.add(name to jsTrim(attrOf(element, schemeAttribute)))
         }
     }
-    return names
+    return Categories(pairs.map { (name, _) -> name }, pairs.map { (_, scheme) -> scheme })
 }
+
+/** The address an RSS item's `<source>` names; empty for none. */
+private fun sourceAddress(item: Element, base: String): String =
+    childrenNamed(item, "source").firstOrNull()?.let { source -> resolveWebAddress(jsTrim(attrOf(source, "url")), base) } ?: ""
 
 /** The raw `href` of the alternate link among Atom links; empty if none. */
 private fun atomHref(links: List<Element>): String {
@@ -298,6 +310,7 @@ private fun parseRssItem(item: Element, base: String): FeedEntry {
         item,
         listOf("pubDate", "date", "published", "issued", "created", "updated", "modified"),
     )
+    val categories = categoryNames(childrenNamed(item, "category"), "domain")
     return FeedEntry(
         guid = childText(item, "guid").ifEmpty { link }.ifEmpty { title },
         title = displayText(title).ifEmpty { link },
@@ -306,8 +319,10 @@ private fun parseRssItem(item: Element, base: String): FeedEntry {
         author = displayText(childText(item, "creator").ifEmpty { childText(item, "author") }),
         imageUrl = leadImage(mediaImages(item, base), html, base),
         summary = plainText(childText(item, "description")).ifEmpty { media.summary },
-        categories = categoryNames(childrenNamed(item, "category")),
+        categories = categories.names,
         html = html,
+        categorySchemes = categories.schemes,
+        sourceUrl = sourceAddress(item, base),
     )
 }
 
@@ -335,6 +350,7 @@ private fun parseAtomEntry(entry: Element, base: String): FeedEntry {
     val html = atomContent(entry).ifEmpty { summary }.ifEmpty { media.html }
     val published = firstDate(entry, listOf("published", "issued", "created", "updated", "modified"))
     val author = childrenNamed(entry, "author").firstOrNull()
+    val categories = categoryNames(childrenNamed(entry, "category"), "scheme")
     return FeedEntry(
         guid = childText(entry, "id").ifEmpty { link }.ifEmpty { title },
         title = displayText(title).ifEmpty { link },
@@ -343,8 +359,9 @@ private fun parseAtomEntry(entry: Element, base: String): FeedEntry {
         author = if (author == null) "" else displayText(childText(author, "name")),
         imageUrl = leadImage(mediaImages(entry, base), html, base),
         summary = plainText(summary).ifEmpty { media.summary },
-        categories = categoryNames(childrenNamed(entry, "category")),
+        categories = categories.names,
         html = html,
+        categorySchemes = categories.schemes,
     )
 }
 

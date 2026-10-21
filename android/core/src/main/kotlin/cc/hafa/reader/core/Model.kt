@@ -58,7 +58,7 @@ data class Entry(
     val guid: String,
     override val title: String,
     /** Link to the original article. */
-    val url: String,
+    override val url: String,
     /** When the feed says it was posted; the first sighting if the feed gives no date. */
     val published: Long,
     /** Whether [published] came from the feed. */
@@ -83,6 +83,8 @@ data class Entry(
     val bodyHash: String = "",
     /** When the read or starred mark last changed. */
     val updatedAt: Long = 0,
+    override val categorySchemes: List<String> = emptyList(),
+    override val sourceUrl: String = "",
 ) : FilterEntry
 
 /** What the article list shows. */

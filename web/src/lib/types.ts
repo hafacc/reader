@@ -50,6 +50,10 @@ export interface Entry {
   summary: string;
   /** Sections, topics and tags the feed lists for the article. */
   categories: string[];
+  /** The scheme of each of `categories` at the same index; empty for none. */
+  categorySchemes: string[];
+  /** Address of the story's source when the feed names one; empty for none. */
+  sourceUrl: string;
   /** Whether it has been read. */
   read: boolean;
   /** Whether it is starred. */

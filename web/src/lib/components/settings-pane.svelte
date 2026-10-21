@@ -6,10 +6,10 @@
   import { byCount } from "$shared/filter.ts";
   import ChipRows from "./chip-rows.svelte";
   import ConfirmButton from "./confirm-button.svelte";
+  import FilterRows from "./filter-rows.svelte";
   import PhoneBar from "./phone-bar.svelte";
   import Segmented from "./segmented.svelte";
   import TextField from "./text-field.svelte";
-  import TopicChip from "./topic-chip.svelte";
 
   const { reader, onback }: { reader: Reader; onback: () => void } = $props();
 
@@ -217,27 +217,16 @@
           <p class="text-xs text-muted">{copy.filterHint}</p>
         </div>
 
-        {#if reader.topics.length > 0}
+        {#if reader.sections.length > 0 || reader.topicGroups.length > 0}
           <div class="flex flex-col gap-3">
-            <span class="font-medium">{copy.topics}</span>
-            <ChipRows
-              items={reader.topics}
-              key={(item) => item.topic.trim().toLowerCase()}
-            >
-              {#snippet chip(item: {
-                topic: string;
-                count: number;
-              })}
-                <TopicChip
-                  topic={item.topic}
-                  count={item.count}
-                  off={reader.topicOff(item.topic)}
-                  ontoggle={() =>
-                    logFailure(reader.toggleTopic(item.topic, false))}
-                />
-              {/snippet}
-            </ChipRows>
-            <p class="text-xs text-muted">{copy.topicsHint}</p>
+            <span class="font-medium">{copy.filters}</span>
+            <FilterRows
+              {reader}
+              sections={reader.sections}
+              topics={reader.topicGroups}
+              fromArticle={false}
+            />
+            <p class="text-xs text-muted">{copy.filtersHint}</p>
           </div>
         {/if}
       {/if}

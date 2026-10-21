@@ -1,6 +1,5 @@
 package cc.hafa.reader.core
 
-import java.text.Collator
 import java.util.concurrent.ConcurrentHashMap
 
 /** The details of an article that filters look at. */
@@ -13,6 +12,18 @@ interface FilterEntry {
 
     /** Sections, topics and tags the feed lists for the article. */
     val categories: List<String>
+
+    /** The scheme of each of [categories] at the same index; empty for none. */
+    val categorySchemes: List<String>
+        get() = emptyList()
+
+    /** Link to the original; sections come from it. */
+    val url: String
+        get() = ""
+
+    /** Address of the story's source, which sections come from instead; empty for none. */
+    val sourceUrl: String
+        get() = ""
 }
 
 /** Order of the article list. */
@@ -32,7 +43,11 @@ data class ViewSettings(
     val hideWords: List<String> = emptyList(),
     /** When not empty, only articles whose title or summary has one of these stay. */
     val onlyWords: List<String> = emptyList(),
-    /** Topics turned off; an article whose topics are all off is hidden. */
+    /**
+     * Topics turned off; an article whose topics are all off is hidden. Entries
+     * starting with [SECTION_PREFIX] hold turned-off sections' places instead,
+     * which hide every article in them.
+     */
     val offTopics: List<String> = emptyList(),
 )
 
@@ -193,22 +208,20 @@ fun topicCounts(entries: List<FilterEntry>): List<TopicCount> {
             }
         }
     }
-    val collator = Collator.getInstance()
-    return counts.values.sortedWith { first, second -> compareCounted(collator, first.count, first.topic, second.count, second.topic) }
+    return counts.values.sortedWith { first, second -> compareCounted(first.count, first.topic, second.count, second.topic) }
 }
 
-private fun compareCounted(collator: Collator, firstCount: Int, firstName: String, secondCount: Int, secondName: String): Int {
+private fun compareCounted(firstCount: Int, firstName: String, secondCount: Int, secondName: String): Int {
     val byCount = secondCount - firstCount
-    return if (byCount != 0) byCount else collator.compare(firstName, secondName)
+    return if (byCount != 0) byCount else compareNames(firstName, secondName)
 }
 
 /** The [names] with the highest counts first and then by name, the order every list of topics or words is shown in. */
 fun byCount(names: List<String>, count: (String) -> Int): List<String> {
-    val collator = Collator.getInstance()
     return names
         .map { name -> name to count(name) }
         .sortedWith { (firstName, firstCount), (secondName, secondCount) ->
-            compareCounted(collator, firstCount, firstName, secondCount, secondName)
+            compareCounted(firstCount, firstName, secondCount, secondName)
         }
         .map { (name, _) -> name }
 }
@@ -233,6 +246,101 @@ private fun topicKey(topic: String): String = topic.trim().lowercase()
 fun articleTopics(categories: List<String>, order: TopicOrder): List<String> =
     byCount(categories.distinctBy(::topicKey), order::countOf)
 
+/** Each topic of an article with its scheme ("" for none), each pair once, blank topics left out. */
+private fun schemedTopics(entry: FilterEntry): List<Pair<String, String>> {
+    val pairs = LinkedHashSet<Pair<String, String>>()
+    for ((index, topic) in entry.categories.withIndex()) {
+        val key = topicKey(topic)
+        if (key.isNotEmpty()) {
+            pairs.add(key to (entry.categorySchemes.getOrNull(index) ?: ""))
+        }
+    }
+    return pairs.toList()
+}
+
+/** Schemes the articles use for more than one distinct topic; the others join the plain group. */
+private fun groupingSchemes(pairs: List<List<Pair<String, String>>>): Set<String> =
+    pairs.flatten()
+        .groupBy({ (_, scheme) -> scheme }, { (key, _) -> key })
+        .filter { (scheme, keys) -> scheme.isNotEmpty() && keys.toSet().size > 1 }
+        .keys
+
+/** The scheme that covers more articles, then the later in code-unit order. */
+private fun largerScheme(first: String, second: String, articles: Map<String, Int>): String {
+    val difference = (articles[second] ?: 0) - (articles[first] ?: 0)
+    return if (difference > 0 || (difference == 0 && second > first)) second else first
+}
+
+/**
+ * The view's topics in groups, by the scheme the feed gives each (RSS
+ * `domain`, Atom `scheme`): topics with no scheme, and those under a scheme
+ * the articles use for only one topic, form the plain group; a topic under
+ * two schemes goes in the group covering more articles. Groups come in order
+ * of how many articles they cover (then by scheme); topics in each by count,
+ * then name, as [topicCounts].
+ */
+fun topicGroups(entries: List<FilterEntry>): List<List<TopicCount>> {
+    val pairs = entries.map(::schemedTopics)
+    val grouping = groupingSchemes(pairs)
+    val articles = HashMap<String, Int>()
+    val schemesOf = HashMap<String, MutableSet<String>>()
+    for (article in pairs) {
+        val grouped = article.map { (key, scheme) -> key to if (scheme in grouping) scheme else "" }
+        for (used in grouped.map { (_, scheme) -> scheme }.toSet()) {
+            articles[used] = (articles[used] ?: 0) + 1
+        }
+        for ((key, scheme) in grouped) {
+            schemesOf.getOrPut(key) { LinkedHashSet() }.add(scheme)
+        }
+    }
+    val groups = LinkedHashMap<String, MutableList<TopicCount>>()
+    for (counted in topicCounts(entries)) {
+        val schemes = schemesOf[topicKey(counted.topic)] ?: setOf("")
+        val scheme = schemes.reduce { best, other -> largerScheme(best, other, articles) }
+        groups.getOrPut(scheme) { mutableListOf() }.add(counted)
+    }
+    return groups.entries
+        .sortedWith(compareByDescending<Map.Entry<String, MutableList<TopicCount>>> { (scheme, _) -> articles[scheme] ?: 0 }.thenBy { (scheme, _) -> scheme })
+        .map { (_, topics) -> topics.toList() }
+}
+
+/** Each topic's group and place in it, by its trimmed lowercase form, from [topicGroups]; built once per view. */
+class GroupOrder(
+    /** The view's topic groups, the group covering most articles first. */
+    val groups: List<List<TopicCount>>,
+) {
+    private val group = HashMap<String, Int>()
+    private val rank = HashMap<String, Int>()
+
+    init {
+        for ((index, topics) in groups.withIndex()) {
+            for ((place, item) in topics.withIndex()) {
+                group[topicKey(item.topic)] = index
+                rank[topicKey(item.topic)] = place
+            }
+        }
+    }
+
+    /**
+     * An article's topics as rows, one per group of the view it has topics in,
+     * in the view's order; topics the view does not know form a last row, by name.
+     */
+    fun articleRows(categories: List<String>): List<List<String>> {
+        return categories
+            .filter { topic -> topicKey(topic).isNotEmpty() }
+            .distinctBy(::topicKey)
+            .groupBy { topic -> group[topicKey(topic)] ?: Int.MAX_VALUE }
+            .entries
+            .sortedBy { (index, _) -> index }
+            .map { (_, topics) ->
+                topics.sortedWith { first, second ->
+                    val byRank = (rank[topicKey(first)] ?: Int.MAX_VALUE).compareTo(rank[topicKey(second)] ?: Int.MAX_VALUE)
+                    if (byRank != 0) byRank else compareNames(first, second)
+                }
+            }
+    }
+}
+
 /** Whether an article stays after the settings' filters are applied. */
 fun passes(settings: ViewSettings, entry: FilterEntry): Boolean = compiledFilter(settings)(entry)
 
@@ -248,13 +356,15 @@ private fun compiledFilter(settings: ViewSettings): (FilterEntry) -> Boolean {
             filters.clear()
         }
         filters.getOrPut(settings) {
-            val off = settings.offTopics.map { topic -> topic.lowercase() }.toSet()
+            val off = settings.offTopics.filter { topic -> !topic.startsWith(SECTION_PREFIX) }.map { topic -> topic.lowercase() }.toSet()
+            val places = offPlaces(settings.offTopics)
             val hide = matcherFor(settings.hideWords)
             val only = if (settings.onlyWords.isEmpty()) null else matcherFor(settings.onlyWords)
             val filter: (FilterEntry) -> Boolean = { entry ->
                 val topicsOff = entry.categories.isNotEmpty() &&
                     entry.categories.all { topic -> topicKey(topic) in off }
-                val hidden = hide(entry.title) || hide(entry.summary)
+                val hidden = hide(entry.title) || hide(entry.summary) ||
+                    (places.isNotEmpty() && placeHidden(places, articlePlace(entry)))
                 val kept = only == null || only(entry.title) || only(entry.summary)
                 !(topicsOff || hidden) && kept
             }

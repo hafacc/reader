@@ -5,7 +5,7 @@ const DB_NAME = "h-reader";
 /** The baseline schema's version; a database from before it is emptied and made anew. */
 const BASELINE_VERSION = 6;
 /** The schema version; raise it together with a new step in `UPGRADES`. */
-const DB_VERSION = 6;
+const DB_VERSION = 7;
 
 /** A schema change from the version before. */
 type UpgradeStep = (db: IDBDatabase, transaction: IDBTransaction) => void;
@@ -16,7 +16,22 @@ type UpgradeStep = (db: IDBDatabase, transaction: IDBTransaction) => void;
  * new version that changes stores or rewrites rows in place, keeping what the
  * person has stored.
  */
-const UPGRADES: Readonly<Record<number, UpgradeStep>> = {};
+const UPGRADES: Readonly<Record<number, UpgradeStep>> = {
+  // entries gain their topics' schemes and their source's address
+  7: (_db, transaction): void => {
+    const request = transaction.objectStore("entries").openCursor();
+    request.onsuccess = (): void => {
+      const cursor = request.result;
+      if (cursor !== null) {
+        const stored: unknown = cursor.value;
+        if (typeof stored === "object" && stored !== null) {
+          cursor.update({ categorySchemes: [], sourceUrl: "", ...stored });
+        }
+        cursor.continue();
+      }
+    };
+  },
+};
 
 /** The baseline schema, replacing whatever stores an older database had. */
 function createBaseline(db: IDBDatabase): void {

@@ -32,6 +32,8 @@ export function sampleEntry(change: Partial<Entry> = {}): Entry {
     excerpt: "Start",
     summary: "",
     categories: ["News"],
+    categorySchemes: [""],
+    sourceUrl: "",
     read: false,
     starred: false,
     addedAt: 2000,

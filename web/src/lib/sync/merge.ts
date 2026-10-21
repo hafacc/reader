@@ -86,6 +86,7 @@ export function mergeEntries(
         ...mine,
         // a plain copy: the local array may be a reactive proxy, which IndexedDB cannot store
         categories: [...mine.categories],
+        categorySchemes: [...mine.categorySchemes],
         read: stored.read,
         starred: stored.starred,
         updatedAt: stored.updatedAt,
