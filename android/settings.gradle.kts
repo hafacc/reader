@@ -19,5 +19,5 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "h-reader"
+rootProject.name = "reader"
 include(":core", ":app")
