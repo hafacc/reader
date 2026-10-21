@@ -7,7 +7,7 @@
 </svelte:head>
 
 <h1>Reader privacy policy</h1>
-<p class="text-muted text-sm">Last updated October 14, 2026</p>
+<p class="text-muted text-sm">Last updated October 20, 2026</p>
 
 <p>
   Reader shows new articles from the feeds you add. It has no server of its own.
@@ -59,12 +59,13 @@
     Signing in is optional and only turns on sync. When you are signed in, the
     same data is also stored in Google Firebase under your account, so it
     follows you between devices: your feeds and groups, each article's details
-    (title, link, author, date, excerpt, summary, topics and picture address),
-    which articles you have read or starred, and each view's sort, words and
-    topics. Your reading font stays on the device. Only your account can read
-    them. Your account also keeps how long synced articles stay. Articles older
-    than that are removed from your account, never from your device; starred
-    articles stay.
+    (title, link, the link to the story's source when the feed gives one,
+    author, date, excerpt, summary, topics and the groups the feed puts them in,
+    and picture address), which articles you have read or starred, and each
+    view's sort, words, topics and sections. Your reading font stays on the
+    device. Only your account can read them. Your account also keeps how long
+    synced articles stay. Articles older than that are removed from your
+    account, never from your device; starred articles stay.
   </li>
   <li>
     The text of each article you sync is stored once in Firebase, shared by

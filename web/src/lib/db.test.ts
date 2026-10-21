@@ -46,8 +46,8 @@ describe("Database", () => {
     await baseline.putEntries([sampleEntry()], new Map([["entry-1", "body"]]));
     baseline.close();
     let runs = 0;
-    const upgraded = await Database.open(7, {
-      7: (): void => {
+    const upgraded = await Database.open(8, {
+      8: (): void => {
         runs += 1;
       },
     });
@@ -58,12 +58,34 @@ describe("Database", () => {
     });
     expect(await upgraded.getBody("entry-1")).toBe("body");
     upgraded.close();
-    await Database.open(7, {
-      7: (): void => {
+    await Database.open(8, {
+      8: (): void => {
         runs += 1;
       },
     });
     expect(runs).toBe(1);
+  });
+
+  test("entries stored before they had schemes and a source get empty ones", async () => {
+    (await Database.open(6, {})).close();
+    const older = Object.fromEntries(
+      Object.entries(sampleEntry()).filter(
+        ([name]) => name !== "categorySchemes" && name !== "sourceUrl",
+      ),
+    );
+    const opening = indexedDB.open("h-reader", 6);
+    const raw = await request(opening);
+    const writing = raw.transaction("entries", "readwrite");
+    writing.objectStore("entries").put(older);
+    await new Promise((resolve) => {
+      writing.oncomplete = resolve;
+    });
+    raw.close();
+    const db = await Database.open();
+    expect((await db.loadAll()).entries).toEqual([
+      sampleEntry({ categorySchemes: [], sourceUrl: "" }),
+    ]);
+    db.close();
   });
 
   test("entries keep their bodies, and removing a feed removes both", async () => {

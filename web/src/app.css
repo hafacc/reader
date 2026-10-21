@@ -148,3 +148,39 @@ input,
     opacity: 0.45;
   }
 }
+
+/* a row of filter chips scrolls sideways with no scrollbar; filter-rows.svelte marks where more chips lie past its ends */
+/* biome-ignore lint/nursery/noUnusedClasses: set by filter-rows.svelte */
+.chip-row {
+  overscroll-behavior-x: contain;
+}
+
+@supports (scrollbar-width: none) {
+  /* biome-ignore lint/nursery/noUnusedClasses: set by filter-rows.svelte */
+  .chip-row {
+    scrollbar-width: none;
+  }
+}
+
+@supports (mask-image: none) {
+  /* biome-ignore lint/nursery/noUnusedClasses: set by filter-rows.svelte */
+  .chip-row.more-after {
+    mask-image: linear-gradient(to right, #000 calc(100% - 28px), transparent);
+  }
+
+  /* biome-ignore lint/nursery/noUnusedClasses: set by filter-rows.svelte */
+  .chip-row.more-before {
+    mask-image: linear-gradient(to right, transparent, #000 28px);
+  }
+
+  /* biome-ignore lint/nursery/noUnusedClasses: set by filter-rows.svelte */
+  .chip-row.more-before.more-after {
+    mask-image: linear-gradient(
+      to right,
+      transparent,
+      #000 28px,
+      #000 calc(100% - 28px),
+      transparent
+    );
+  }
+}

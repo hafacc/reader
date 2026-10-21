@@ -15,6 +15,7 @@ import androidx.room.TypeConverter
 import androidx.room.TypeConverters
 import androidx.room.Upsert
 import androidx.room.migration.Migration
+import androidx.sqlite.db.SupportSQLiteDatabase
 import cc.hafa.reader.core.PostingPattern
 import kotlinx.serialization.builtins.ListSerializer
 import kotlinx.serialization.builtins.MapSerializer
@@ -110,6 +111,12 @@ data class EntryRecord(
     val bodyHash: String,
     /** When the read or starred mark last changed. */
     val updatedAt: Long,
+    /** The scheme of each topic at the same index, as JSON; empty for none. */
+    @ColumnInfo(defaultValue = "[]")
+    val categorySchemes: List<String>,
+    /** Address of the story's source; empty for none. */
+    @ColumnInfo(defaultValue = "")
+    val sourceUrl: String,
 )
 
 /** An article's body, kept apart so lists load without it. */
@@ -304,7 +311,7 @@ interface ReaderDao {
 /** The reader's local database. */
 @Database(
     entities = [FeedRecord::class, EntryRecord::class, BodyRecord::class, SettingsRecord::class, TombstoneRecord::class],
-    version = 7,
+    version = 8,
     exportSchema = true,
 )
 @TypeConverters(Converters::class)
@@ -322,10 +329,18 @@ abstract class ReaderDatabase : RoomDatabase() {
                 .build()
 
         /**
-         * Steps from one database version to the next; none yet. To change the
-         * tables, raise `version`, build to export the new schema into
-         * `app/schemas`, and add a [Migration] from the old version here.
+         * Steps from one database version to the next. To change the tables,
+         * raise `version`, build to export the new schema into `app/schemas`,
+         * and add a [Migration] from the old version here.
          */
-        val MIGRATIONS: Array<Migration> = emptyArray()
+        val MIGRATIONS: Array<Migration> = arrayOf(
+            // entries gain their topics' schemes and their source's address
+            object : Migration(7, 8) {
+                override fun migrate(db: SupportSQLiteDatabase) {
+                    db.execSQL("ALTER TABLE `entries` ADD COLUMN `categorySchemes` TEXT NOT NULL DEFAULT '[]'")
+                    db.execSQL("ALTER TABLE `entries` ADD COLUMN `sourceUrl` TEXT NOT NULL DEFAULT ''")
+                }
+            },
+        )
     }
 }

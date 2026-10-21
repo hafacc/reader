@@ -1066,6 +1066,30 @@ class ReaderModelTest {
     }
 
     @Test
+    fun `a section turned off hides its articles, and its parent comes back with a child`() = runTest {
+        val model = model()
+        val items = listOf("us/politics/a", "us/politics/b", "us/c", "world/d", "world/e").joinToString("") { path ->
+            "<item><title>$path</title><link>https://www.s.example/$path.html</link></item>"
+        }
+        fetcher.answers["https://s.example/feed"] = FetchOutcome(status = 200, text = "<rss><channel><title>S</title>$items</channel></rss>")
+        model.addFeed("https://s.example/feed")
+        model.select(Selection.All)
+        val view = model.view()
+        assertEquals(listOf("us" to 3, "us/politics" to 2, "world" to 2), view.filters.sections.map { section -> section.label to section.count })
+        val politics = view.baseEntries.first { entry -> entry.title == "us/politics/a" }
+        val filters = view.filters.of(politics)
+        assertEquals(listOf("s.example/us", "s.example/us/politics"), filters.sections.map { section -> section.place })
+        model.toggleSection("s.example/us", fromArticle = false)
+        assertEquals(listOf("section:s.example/us"), model.view().viewSettings.offTopics)
+        assertTrue(filters.anyOff(model.view().viewSettings))
+        assertEquals(listOf("world/d", "world/e"), model.titles().sorted())
+        model.toggleSection("s.example/us/politics", fromArticle = false)
+        assertEquals(emptyList(), model.view().viewSettings.offTopics)
+        model.select(Selection.Starred)
+        assertTrue(model.view().filters.of(politics).isEmpty)
+    }
+
+    @Test
     fun `a topic turned off from an article is held until the list is refreshed`() = runTest {
         val model = model()
         model.addTagged()

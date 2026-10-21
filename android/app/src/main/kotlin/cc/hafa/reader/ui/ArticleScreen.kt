@@ -35,11 +35,13 @@ import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.OpenInNew
 import androidx.compose.material.icons.automirrored.outlined.Undo
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.outlined.Check
+import androidx.compose.material.icons.outlined.FilterList
 import androidx.compose.material.icons.outlined.Share
 import androidx.compose.material.icons.outlined.StarOutline
 import androidx.compose.material3.BottomAppBarDefaults
@@ -47,21 +49,26 @@ import androidx.compose.material3.BottomAppBarScrollBehavior
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.LocalTextStyle
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
-import androidx.compose.runtime.rememberUpdatedState
-import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.layout.ContentScale
@@ -69,6 +76,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.LinkAnnotation
@@ -85,10 +93,11 @@ import androidx.compose.ui.text.withLink
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import cc.hafa.reader.R
+import cc.hafa.reader.core.ArticleFilters
 import cc.hafa.reader.core.Entry
-import cc.hafa.reader.core.Selection
-import cc.hafa.reader.core.articleTopics
+import cc.hafa.reader.core.ViewSettings
 import cc.hafa.reader.core.decodeHtmlEntities
+import cc.hafa.reader.core.sectionOff
 import cc.hafa.reader.core.showsLeadImage
 import cc.hafa.reader.core.topicOff
 import coil3.SingletonImageLoader
@@ -169,6 +178,10 @@ fun ArticleScreen(snapshot: Snapshot, viewModel: ReaderViewModel, leaving: Boole
     val scrollBehavior = BottomAppBarDefaults.exitAlwaysScrollBehavior()
     val pull = rememberEdgeDrag(Orientation.Vertical, fromEdgeOnly = true) { towards -> close(towards) }
     val sideways = rememberEdgeDrag(Orientation.Horizontal, fromEdgeOnly = false) { towards -> close(towards) }
+    val filters = remember(entry, view.filters) { entry?.let(view.filters::of) }
+    var filtersOpen by remember { mutableStateOf(false) }
+    // Another article closes the sheet the last one had open.
+    LaunchedEffect(entry?.id) { filtersOpen = false }
     // Outside the bar's own handling, so a pull past the end does not count as scrolling that hides the bar.
     Box(Modifier.fillMaxSize().nestedScroll(pull)) {
         ReaderScaffold(
@@ -177,6 +190,9 @@ fun ArticleScreen(snapshot: Snapshot, viewModel: ReaderViewModel, leaving: Boole
                     BackButton { close(Offset.Zero) }
                     Spacer(Modifier.weight(1f))
                     if (entry != null) {
+                        if (filters != null && !filters.isEmpty) {
+                            FilterButton(off = filters.anyOff(view.viewSettings), open = filtersOpen) { filtersOpen = true }
+                        }
                         ArticleBarActions(entry, state.shownRead(entry), viewModel)
                     }
                 }
@@ -199,6 +215,72 @@ fun ArticleScreen(snapshot: Snapshot, viewModel: ReaderViewModel, leaving: Boole
                 val release = stringResource(R.string.release_to_close)
                 PullIndicator(pull, padding, release)
                 PullIndicator(sideways, padding, release)
+            }
+        }
+    }
+    if (filtersOpen && filters != null && !filters.isEmpty) {
+        FilterSheet(filters, view.viewSettings, viewModel) { filtersOpen = false }
+    }
+}
+
+/** The bottom bar's filter button, with a dot while any of the article's chips is off; tinted while its sheet is [open]. */
+@Composable
+private fun FilterButton(off: Boolean, open: Boolean, onClick: () -> Unit) {
+    val colors = ReaderTheme.colors
+    IconButton(
+        onClick = onClick,
+        colors = IconButtonDefaults.iconButtonColors(
+            containerColor = if (open) colors.accentSoft else Color.Transparent,
+            contentColor = if (open) colors.accent else colors.muted,
+        ),
+    ) {
+        WithDueDot(off) {
+            Icon(
+                Icons.Outlined.FilterList,
+                contentDescription = stringResource(if (off) R.string.filters_some_off else R.string.filters),
+            )
+        }
+    }
+}
+
+/**
+ * The open article's filters in a sheet over the dimmed article: its sections, then one row of topics per group.
+ * Dragging it down, tapping outside it or Back closes it through [onDismiss].
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun FilterSheet(filters: ArticleFilters, settings: ViewSettings, viewModel: ReaderViewModel, onDismiss: () -> Unit) {
+    val colors = ReaderTheme.colors
+    val model = viewModel.model
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
+        containerColor = colors.panel,
+    ) {
+        Column(Modifier.padding(start = 20.dp, end = 20.dp, bottom = 20.dp)) {
+            Row(
+                Modifier.padding(bottom = 8.dp).semantics { heading() },
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                Icon(Icons.Outlined.FilterList, contentDescription = null, tint = colors.muted)
+                Text(stringResource(R.string.filters), fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
+            }
+            Column(Modifier.verticalScroll(rememberScrollState())) {
+                FilterRows(
+                    sections = filters.sections.map { section ->
+                        FilterChipItem(section.place, section.label, null, sectionOff(settings.offTopics, section.place)) {
+                            model.toggleSection(section.place, fromArticle = true)
+                        }
+                    },
+                    topics = filters.topics.map { row ->
+                        row.map { topic ->
+                            FilterChipItem(topic.trim().lowercase(), topic, null, topicOff(settings, topic)) {
+                                model.toggleTopic(topic, fromArticle = true)
+                            }
+                        }
+                    },
+                )
             }
         }
     }
@@ -368,25 +450,6 @@ private fun ArticlePage(
                 }
             }
             items(blocks) { block -> BodyBlock(block) }
-            // The actions and topics wait for the body, so they do not show under the title and then jump down.
-            if (split != null && entry.categories.isNotEmpty()) {
-                item(key = "categories") {
-                    val topics = remember(entry.categories, view.topicOrder) { articleTopics(entry.categories, view.topicOrder) }
-                    // Starred has no topic filter, so there the topics are plain labels.
-                    if (state.selection == Selection.Starred) {
-                        ChipRows(topics) { topic -> TopicLabel(topic) }
-                    } else {
-                        // The chips read the view's settings, which change at once; only the list waits for a refresh.
-                        ChipRows(topics) { topic ->
-                            TopicChip(
-                                topic,
-                                off = topicOff(view.viewSettings, topic),
-                                onToggle = { viewModel.model.toggleTopic(topic, fromArticle = true) },
-                            )
-                        }
-                    }
-                }
-            }
         }
     }
 }

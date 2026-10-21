@@ -62,6 +62,10 @@ data class EntryDocument(
     val summary: String,
     /** Topics the feed lists. */
     val categories: List<String>,
+    /** The scheme of each topic at the same index; empty for none. Missing from older clients' documents. */
+    val categorySchemes: List<String> = emptyList(),
+    /** Address of the story's source; empty for none. Missing from older clients' documents. */
+    val sourceUrl: String = "",
     /** Hash of the shared body; empty when unknown. */
     val bodyHash: String,
     /** Whether it has been read. */
@@ -329,6 +333,8 @@ fun entryDocument(entry: Entry, retention: RetentionDays = null): EntryDocument 
         excerpt = cutText(entry.excerpt, FieldLimits.EXCERPT),
         summary = cutText(entry.summary, FieldLimits.SUMMARY),
         categories = entry.categories.take(FieldLimits.CATEGORIES),
+        categorySchemes = entry.categorySchemes.take(FieldLimits.CATEGORIES).map(::fitAddress),
+        sourceUrl = fitAddress(entry.sourceUrl),
         bodyHash = entry.bodyHash,
         read = entry.read,
         starred = entry.starred,
@@ -352,6 +358,8 @@ fun entryFromDocument(id: String, stored: EntryDocument): Entry =
         excerpt = stored.excerpt,
         summary = stored.summary,
         categories = stored.categories.toList(),
+        categorySchemes = stored.categorySchemes.toList(),
+        sourceUrl = stored.sourceUrl,
         read = stored.read,
         starred = stored.starred,
         addedAt = stored.addedAt,
@@ -441,6 +449,8 @@ fun parseEntry(fields: Map<String, Any?>): EntryDocument? =
             excerpt = text(fields, "excerpt"),
             summary = text(fields, "summary"),
             categories = texts(fields, "categories"),
+            categorySchemes = texts(fields, "categorySchemes"),
+            sourceUrl = upgradedAddress(text(fields, "sourceUrl")),
             bodyHash = text(fields, "bodyHash"),
             read = flag(fields, "read"),
             starred = flag(fields, "starred"),
@@ -490,7 +500,7 @@ fun EntryDocument.toFields(): Map<String, Any?> {
     val fields = mutableMapOf<String, Any?>(
         "feedId" to feedId, "guid" to guid, "title" to title, "published" to published, "dated" to dated,
         "url" to url, "author" to author, "imageUrl" to imageUrl, "excerpt" to excerpt, "summary" to summary,
-        "categories" to categories, "read" to read, "starred" to starred, "addedAt" to addedAt, "updatedAt" to updatedAt,
+        "categories" to categories, "categorySchemes" to categorySchemes, "sourceUrl" to sourceUrl, "read" to read, "starred" to starred, "addedAt" to addedAt, "updatedAt" to updatedAt,
     )
     if (bodyHash.isNotEmpty()) {
         fields["bodyHash"] = bodyHash

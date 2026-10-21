@@ -174,3 +174,11 @@ export function tick(): void {
     navigator.vibrate(TICK_MS);
   }
 }
+
+/** How far a bottom sheet must be dragged down to close. */
+const SHEET_CLOSE_DISTANCE = 80;
+
+/** Whether dragging a bottom sheet `down` pixels, begun with its content at its top, closes it. */
+export function closesSheet(down: number, startedAtTop: boolean): boolean {
+  return startedAtTop && down >= SHEET_CLOSE_DISTANCE;
+}

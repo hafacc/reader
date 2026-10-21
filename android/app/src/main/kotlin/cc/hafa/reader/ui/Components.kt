@@ -5,48 +5,48 @@ import androidx.compose.animation.core.animate
 import androidx.compose.animation.core.spring
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.asPaddingValues
-import androidx.compose.foundation.layout.calculateEndPadding
-import androidx.compose.foundation.layout.calculateStartPadding
-import androidx.compose.foundation.layout.isImeVisible
-import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.safeDrawing
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.asPaddingValues
+import androidx.compose.foundation.layout.calculateEndPadding
+import androidx.compose.foundation.layout.calculateStartPadding
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.ime
-import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.isImeVisible
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.union
-import androidx.compose.foundation.layout.statusBars
-import androidx.compose.foundation.layout.windowInsetsTopHeight
+import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBars
+import androidx.compose.foundation.layout.union
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.windowInsetsTopHeight
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
+import androidx.compose.material.icons.outlined.Link
 import androidx.compose.material3.BottomAppBar
 import androidx.compose.material3.BottomAppBarDefaults
 import androidx.compose.material3.BottomAppBarScrollBehavior
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.IconToggleButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonDefaults
 import androidx.compose.material3.SingleChoiceSegmentedButtonRow
@@ -389,15 +389,20 @@ fun ConfirmButton(label: String, confirmLabel: String, confirming: Boolean, onCl
 }
 
 /**
- * A topic as a filter chip, struck through while [off]; [count] shows after it when given. The one chip for topics in
- * the settings and under an article; Material keeps its touch area at least 48dp tall.
+ * A topic or, led by a link icon, a [section] as a filter chip, struck through while [off]; [count] shows after it
+ * when given. The one chip of the filter rows; Material keeps its touch area at least 48dp tall.
  */
 @Composable
-fun TopicChip(topic: String, off: Boolean, onToggle: () -> Unit, count: Int? = null) {
+fun TopicChip(topic: String, off: Boolean, onToggle: () -> Unit, count: Int? = null, section: Boolean = false) {
     val colors = ReaderTheme.colors
     FilterChip(
         selected = !off,
         onClick = onToggle,
+        leadingIcon = if (section) {
+            { Icon(Icons.Outlined.Link, contentDescription = null, modifier = Modifier.size(14.dp), tint = colors.muted) }
+        } else {
+            null
+        },
         label = {
             Text(
                 topic,
@@ -416,18 +421,6 @@ fun TopicChip(topic: String, off: Boolean, onToggle: () -> Unit, count: Int? = n
             selectedBorderColor = colors.line,
         ),
     )
-}
-
-/** A topic in a chip's outline that does nothing when pressed, for views without a topic filter. */
-@Composable
-fun TopicLabel(topic: String) {
-    val colors = ReaderTheme.colors
-    Box(
-        Modifier.heightIn(min = 32.dp).border(1.dp, colors.line, FilterChipDefaults.shape).padding(horizontal = 12.dp),
-        contentAlignment = Alignment.Center,
-    ) {
-        Text(topic, style = MaterialTheme.typography.labelLarge, color = colors.text)
-    }
 }
 
 /** A row of choices of which exactly one is on, each at least 48dp tall. */

@@ -2,6 +2,7 @@
   import ArrowLeft from "@lucide/svelte/icons/arrow-left";
   import Check from "@lucide/svelte/icons/check";
   import ExternalLink from "@lucide/svelte/icons/external-link";
+  import ListFilter from "@lucide/svelte/icons/list-filter";
   import Share from "@lucide/svelte/icons/share-2";
   import Star from "@lucide/svelte/icons/star";
   import Undo2 from "@lucide/svelte/icons/undo-2";
@@ -21,10 +22,9 @@
   import { isNarrow } from "#lib/layout.ts";
   import { logFailure, type Reader } from "#lib/reader.svelte.ts";
   import { mentionsUrl } from "#lib/sanitize.ts";
-  import { articleTopics } from "$shared/filter.ts";
-  import ChipRows from "./chip-rows.svelte";
+  import FilterPopover from "./filter-popover.svelte";
+  import FilterSheet from "./filter-sheet.svelte";
   import PullMarker from "./pull-marker.svelte";
-  import TopicChip from "./topic-chip.svelte";
 
   const {
     reader,
@@ -46,9 +46,16 @@
   const entry = $derived(reader.current);
   // an unread article shows as read while open, since leaving it marks it read
   const shownRead = $derived(entry ? reader.shownRead(entry) : false);
-  const topics = $derived(
-    entry ? articleTopics(entry.categories, reader.topicOrder) : [],
+  const filters = $derived(
+    entry ? reader.articleFilters(entry) : { sections: [], topics: [] },
   );
+  const hasFilters = $derived(
+    filters.sections.length > 0 || filters.topics.length > 0,
+  );
+  const filtersOff = $derived(reader.filtersOff(filters));
+  // the filters open over the article: a sheet on a phone, a box below the button on a wide screen
+  let filtersOpen = $state<"none" | "sheet" | "box">("none");
+  let filterButton: HTMLButtonElement | undefined = $state();
   const showImage = $derived(
     entry !== undefined &&
       entry.imageUrl !== "" &&
@@ -220,6 +227,19 @@
     }
   });
 
+  let shownId: string | undefined;
+  $effect(() => {
+    // another article closes what the last one had open
+    if (entry?.id !== shownId || !hasFilters) {
+      shownId = entry?.id;
+      filtersOpen = "none";
+    }
+  });
+
+  function closeFilters(): void {
+    filtersOpen = "none";
+  }
+
   async function share(): Promise<void> {
     if (entry) {
       if (canShare) {
@@ -360,7 +380,7 @@
   }
 </script>
 
-<article class="flex h-full min-h-0 flex-col">
+<article class="relative flex h-full min-h-0 flex-col">
   <!-- on a phone Back and the article's actions sit at the bottom, where a thumb reaches them, as on Android -->
   <header
     class="order-last flex h-[calc(4rem+env(safe-area-inset-bottom))] shrink-0 items-center gap-1 border-t border-line bg-side px-1 pb-[env(safe-area-inset-bottom)] md:hidden"
@@ -375,6 +395,28 @@
     </button>
     <span class="flex-1"></span>
     {#if entry}
+      {#if hasFilters}
+        <button
+          type="button"
+          class="relative grid size-12 place-items-center rounded-md {filtersOpen ===
+          "sheet"
+            ? "bg-accent-soft text-accent"
+            : "text-muted"}"
+          aria-label={filtersOff ? copy.filtersSomeOff : copy.filters}
+          aria-expanded={filtersOpen === "sheet"}
+          onclick={() => {
+            filtersOpen = "sheet";
+          }}
+        >
+          <ListFilter class="size-5" />
+          {#if filtersOff}
+            <span
+              class="pointer-events-none absolute top-2.5 right-2.5 size-2 rounded-full bg-accent ring-2 ring-side"
+              aria-hidden="true"
+            ></span>
+          {/if}
+        </button>
+      {/if}
       <button
         type="button"
         class="grid size-12 place-items-center rounded-md text-muted"
@@ -453,7 +495,39 @@
           </h1>
           <div class="flex items-center justify-between gap-3">
             <p class="min-w-0 font-mono text-xs text-muted">{byline}</p>
-            <div class="-my-2 -mr-2 hidden shrink-0 md:flex">
+            <div class="relative -my-2 -mr-2 hidden shrink-0 md:flex">
+              {#if hasFilters}
+                <button
+                  type="button"
+                  class="relative grid size-8 place-items-center rounded-md hover:bg-side hover:text-ink {filtersOpen ===
+                  "box"
+                    ? "bg-accent-soft text-accent"
+                    : "text-muted"}"
+                  aria-label={filtersOff ? copy.filtersSomeOff : copy.filters}
+                  aria-expanded={filtersOpen === "box"}
+                  title={copy.filters}
+                  bind:this={filterButton}
+                  onclick={() => {
+                    filtersOpen = filtersOpen === "box" ? "none" : "box";
+                  }}
+                >
+                  <ListFilter class="size-4" />
+                  {#if filtersOff}
+                    <span
+                      class="pointer-events-none absolute top-0.5 right-0.5 size-2 rounded-full bg-accent ring-2 ring-page"
+                      aria-hidden="true"
+                    ></span>
+                  {/if}
+                </button>
+                {#if filtersOpen === "box"}
+                  <FilterPopover
+                    {reader}
+                    {filters}
+                    anchor={filterButton}
+                    onclose={closeFilters}
+                  />
+                {/if}
+              {/if}
               <button
                 type="button"
                 class="grid size-8 place-items-center rounded-md text-muted hover:bg-side hover:text-ink"
@@ -517,23 +591,6 @@
             </button>
           {/if}
         </div>
-        {#if topics.length > 0}
-          <ChipRows items={topics} key={(topic) => topic.trim().toLowerCase()}>
-            {#snippet chip(
-              topic: string,
-            )}
-              {#if reader.filtersApply}
-                <TopicChip
-                  {topic}
-                  off={reader.topicOff(topic)}
-                  ontoggle={() => logFailure(reader.toggleTopic(topic, true))}
-                />
-              {:else}
-                <TopicChip {topic} />
-              {/if}
-            {/snippet}
-          </ChipRows>
-        {/if}
       </div>
     {:else}
       <div
@@ -565,4 +622,7 @@
     </div>
   {/if}
   <p class="sr-only" aria-live="polite">{armed ? copy.releaseToClose : ""}</p>
+  {#if filtersOpen === "sheet" && entry}
+    <FilterSheet {reader} {filters} onclose={closeFilters} />
+  {/if}
 </article>

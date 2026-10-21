@@ -100,7 +100,12 @@ class DocumentsTest {
 
     @Test
     fun `entries round trip`() {
-        val entry = sampleEntry().copy(bodyHash = "abc", starred = true)
+        val entry = sampleEntry().copy(
+            bodyHash = "abc",
+            starred = true,
+            categorySchemes = listOf("https://example.com/subjects"),
+            sourceUrl = "https://news.example.net/",
+        )
         val document = entryDocument(entry)
         assertNull(document.expireAt)
         assertEquals(entry, entryFromDocument(entry.id, document))
@@ -166,6 +171,9 @@ class DocumentsTest {
             mapOf("feedId" to "feed-1", "updatedAt" to 3L, "categories" to listOf("ok", 4), "read" to "yes", "published" to Double.NaN),
         )
         assertEquals(listOf("ok"), parsed?.categories)
+        // an older client's entry has no schemes or source
+        assertEquals(emptyList(), parsed?.categorySchemes)
+        assertEquals("", parsed?.sourceUrl)
         assertEquals(false, parsed?.read)
         assertEquals(0L, parsed?.published)
         assertEquals(false, parsed?.dated)

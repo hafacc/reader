@@ -3,10 +3,13 @@ import { upgradedAddress } from "$shared/address.ts";
 import { statusProblem } from "$shared/check.ts";
 import { type ParsedFeed, parseFeed } from "$shared/feed.ts";
 import {
+  articleTopicGroups,
   DEFAULT_SETTINGS,
+  groupOrder,
   hasWord,
   keeper,
   topicCounts,
+  topicGroups,
   topicRanks,
   type ViewSettings,
 } from "$shared/filter.ts";
@@ -33,6 +36,13 @@ import type {
 } from "$shared/protocol.ts";
 import { discoverIconLinks, feedCandidates } from "$shared/resolve.ts";
 import { overdueAt } from "$shared/schedule.ts";
+import {
+  feedSections,
+  type SectionChip,
+  sectionCounts,
+  sectionOff,
+  toggledSection,
+} from "$shared/sections.ts";
 import { copy } from "./copy.ts";
 import { Database } from "./db.ts";
 import { ExtensionClient } from "./extension.svelte.ts";
@@ -124,6 +134,8 @@ async function prepareEntries(
         excerpt: item.summary || excerpt(item.html),
         summary: item.summary,
         categories: item.categories,
+        categorySchemes: item.categorySchemes ?? [],
+        sourceUrl: upgradedAddress(item.sourceUrl ?? ""),
         read: false,
         starred: false,
         addedAt: now,
@@ -365,6 +377,31 @@ function sameArticles(
   );
 }
 
+/** Each article's section chips, worked out per feed from all of that feed's articles given. */
+function sectionsByEntry(
+  entries: readonly Entry[],
+): Map<string, SectionChip[]> {
+  const byFeed = Map.groupBy(entries, (entry) => entry.feedId);
+  const chips = new Map<string, SectionChip[]>();
+  for (const articles of byFeed.values()) {
+    for (const [index, sections] of feedSections(articles).entries()) {
+      const article = articles[index];
+      if (article !== undefined && sections.length > 0) {
+        chips.set(article.id, sections);
+      }
+    }
+  }
+  return chips;
+}
+
+/** An open article's filters: its section chips, then its topics in one row per group. */
+export interface ArticleFilters {
+  /** Its sections, outermost first. */
+  sections: SectionChip[];
+  /** Its topics, one row per group of the view. */
+  topics: string[][];
+}
+
 /** Everything the interface shows, and the actions that change it. */
 export class Reader {
   /** Subscribed feeds. */
@@ -596,6 +633,22 @@ export class Reader {
 
   /** Each topic's place in `topics`, for ordering an article's topics. */
   topicOrder = $derived(topicRanks(this.topics));
+
+  /** Each article's section chips in the current view, from its own feed's articles; none in Starred. */
+  articleSections = $derived(
+    this.filtersApply
+      ? sectionsByEntry(this.countedArticles)
+      : new Map<string, SectionChip[]>(),
+  );
+
+  /** The current view's sections with how many articles each covers, each followed by those under it. */
+  sections = $derived(sectionCounts([...this.articleSections.values()]));
+
+  /** The current view's topics in groups by the feed's schemes, the group covering most articles first. */
+  topicGroups = $derived(topicGroups(this.countedArticles));
+
+  /** Where each topic sits in `topicGroups`, for ordering an article's topics. */
+  private readonly groupOrder = $derived(groupOrder(this.topicGroups));
 
   /** How many of the current view's articles have each of its words in the title or summary. */
   wordCounts = $derived.by(() => {
@@ -1306,13 +1359,35 @@ export class Reader {
     );
   }
 
+  /** Whether the current view has a section, or one above it, turned off. */
+  sectionOff(place: string): boolean {
+    return sectionOff(this.viewSettings.offTopics, place);
+  }
+
+  /** An article's sections and topics as the filter rows show them; empty in Starred. */
+  articleFilters(entry: Entry): ArticleFilters {
+    return this.filtersApply
+      ? {
+          sections: this.articleSections.get(entry.id) ?? [],
+          topics: articleTopicGroups(entry.categories, this.groupOrder),
+        }
+      : { sections: [], topics: [] };
+  }
+
+  /** Whether any of an article's sections or topics is turned off in the current view. */
+  filtersOff(filters: ArticleFilters): boolean {
+    return (
+      filters.sections.some(({ place }) => this.sectionOff(place)) ||
+      filters.topics.some((row) => row.some((topic) => this.topicOff(topic)))
+    );
+  }
+
   /**
    * Turn a topic off or back on in the current view. From an article the list
    * keeps its rows until the next refresh or view change; from the settings
    * panel everything takes effect at once.
    */
   async toggleTopic(topic: string, fromArticle: boolean): Promise<void> {
-    const key = viewKey(this.selection);
     const wasOff = this.topicOff(topic);
     const lower = topic.toLowerCase();
     const offTopics = wasOff
@@ -1320,6 +1395,26 @@ export class Reader {
           (known) => known.toLowerCase() !== lower,
         )
       : [...this.viewSettings.offTopics, topic];
+    await this.changeOffTopics(offTopics, fromArticle);
+  }
+
+  /**
+   * Turn a section off, with every section under it, or back on, with every
+   * section above it, in the current view; from an article the list holds
+   * as it does for a topic.
+   */
+  async toggleSection(place: string, fromArticle: boolean): Promise<void> {
+    await this.changeOffTopics(
+      toggledSection(this.viewSettings.offTopics, place),
+      fromArticle,
+    );
+  }
+
+  private async changeOffTopics(
+    offTopics: string[],
+    fromArticle: boolean,
+  ): Promise<void> {
+    const key = viewKey(this.selection);
     if (fromArticle) {
       this.heldTopics[key] ??= [...this.viewSettings.offTopics];
     } else {

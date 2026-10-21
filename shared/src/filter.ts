@@ -1,3 +1,11 @@
+import { compareNames } from "./names.ts";
+import {
+  articlePlace,
+  offPlaces,
+  placeHidden,
+  SECTION_PREFIX,
+} from "./sections.ts";
+
 /** The details of an article that filters look at. */
 export interface FilterEntry {
   /** The article's title. */
@@ -6,6 +14,20 @@ export interface FilterEntry {
   summary: string;
   /** Sections, topics and tags the feed lists for the article. */
   categories: string[];
+  /** The scheme of each of `categories` at the same index; empty or missing for none. */
+  categorySchemes?: string[];
+  /** Link to the original; sections come from it. Missing counts as none. */
+  url?: string;
+  /** Address of the story's source, which sections come from instead; empty or missing for none. */
+  sourceUrl?: string;
+}
+
+/** A topic with how many articles carry it. */
+export interface TopicCount {
+  /** The topic as the last article carrying it spelled it. */
+  topic: string;
+  /** Articles that carry it. */
+  count: number;
 }
 
 /** How one feed, group or the main list is shown. */
@@ -16,7 +38,11 @@ export interface ViewSettings {
   hideWords: string[];
   /** When not empty, only articles whose title or summary has one of these stay. */
   onlyWords: string[];
-  /** Topics turned off; an article whose topics are all off is hidden. */
+  /**
+   * Topics turned off; an article whose topics are all off is hidden. Entries
+   * starting with `SECTION_PREFIX` hold turned-off sections' places instead,
+   * which hide every article in them.
+   */
   offTopics: string[];
 }
 
@@ -130,10 +156,8 @@ function matchesEntry(matcher: Matcher, entry: FilterEntry): boolean {
  * The topics the articles carry, with how many articles carry each,
  * commonest first and then by name.
  */
-export function topicCounts(
-  entries: readonly FilterEntry[],
-): { topic: string; count: number }[] {
-  const counts = new Map<string, { topic: string; count: number }>();
+export function topicCounts(entries: readonly FilterEntry[]): TopicCount[] {
+  const counts = new Map<string, TopicCount>();
   for (const entry of entries) {
     const seen = new Set<string>();
     for (const topic of entry.categories) {
@@ -156,7 +180,7 @@ function compareCounted(
   secondCount: number,
   secondName: string,
 ): number {
-  return secondCount - firstCount || firstName.localeCompare(secondName);
+  return secondCount - firstCount || compareNames(firstName, secondName);
 }
 
 /**
@@ -179,9 +203,7 @@ export function byCount(
  * Each topic's place in the view's order, by its trimmed lower-case form,
  * from `topicCounts`; built once per view so each article looks its topics up.
  */
-export function topicRanks(
-  counts: readonly { topic: string; count: number }[],
-): Map<string, number> {
+export function topicRanks(counts: readonly TopicCount[]): Map<string, number> {
   const ranks = new Map<string, number>();
   for (const [index, { topic }] of counts.entries()) {
     ranks.set(topic.trim().toLowerCase(), index);
@@ -210,7 +232,7 @@ export function articleTopics(
   return unique
     .sort(
       (first, second) =>
-        first.rank - second.rank || first.topic.localeCompare(second.topic),
+        first.rank - second.rank || compareNames(first.topic, second.topic),
     )
     .map(({ topic }) => topic);
 }
@@ -222,7 +244,12 @@ export function articleTopics(
 export function keeper(
   settings: ViewSettings,
 ): (entry: FilterEntry) => boolean {
-  const off = new Set(settings.offTopics.map((topic) => topic.toLowerCase()));
+  const off = new Set(
+    settings.offTopics
+      .filter((topic) => !topic.startsWith(SECTION_PREFIX))
+      .map((topic) => topic.toLowerCase()),
+  );
+  const places = offPlaces(settings.offTopics);
   const hide = matcherFor(settings.hideWords);
   const only = matcherFor(settings.onlyWords);
   const onlySome = settings.onlyWords.length > 0;
@@ -231,10 +258,156 @@ export function keeper(
       off.size > 0 &&
       entry.categories.length > 0 &&
       entry.categories.every((topic) => off.has(topic.trim().toLowerCase()));
-    const hidden = matchesEntry(hide, entry);
+    const hidden =
+      matchesEntry(hide, entry) ||
+      (places.length > 0 &&
+        placeHidden(
+          places,
+          articlePlace({ url: entry.url ?? "", sourceUrl: entry.sourceUrl }),
+        ));
     const kept = !onlySome || matchesEntry(only, entry);
     return !(topicsOff || hidden) && kept;
   };
+}
+
+function topicKey(topic: string): string {
+  return topic.trim().toLowerCase();
+}
+
+/** Each topic of an article with its scheme ("" for none), each pair once, blank topics left out. */
+function schemedTopics(entry: FilterEntry): [string, string][] {
+  const pairs = new Map<string, [string, string]>();
+  for (const [index, topic] of entry.categories.entries()) {
+    const key = topicKey(topic);
+    const scheme = entry.categorySchemes?.[index] ?? "";
+    if (key !== "") {
+      pairs.set(`${scheme}\n${key}`, [key, scheme]);
+    }
+  }
+  return [...pairs.values()];
+}
+
+function countUp(counts: Map<string, number>, key: string): void {
+  counts.set(key, (counts.get(key) ?? 0) + 1);
+}
+
+/** Schemes the articles use for more than one distinct topic; the others join the plain group. */
+function groupingSchemes(pairs: readonly [string, string][][]): Set<string> {
+  const terms = new Map<string, Set<string>>();
+  for (const [key, scheme] of pairs.flat()) {
+    terms.set(scheme, (terms.get(scheme) ?? new Set()).add(key));
+  }
+  return new Set(
+    [...terms]
+      .filter(([scheme, keys]) => scheme !== "" && keys.size > 1)
+      .map(([scheme]) => scheme),
+  );
+}
+
+/** The scheme that covers more articles, then the later in code-unit order. */
+function largerScheme(
+  first: string,
+  second: string,
+  articles: ReadonlyMap<string, number>,
+): string {
+  const difference = (articles.get(second) ?? 0) - (articles.get(first) ?? 0);
+  return difference > 0 || (difference === 0 && second > first)
+    ? second
+    : first;
+}
+
+/**
+ * The view's topics in groups, by the scheme the feed gives each (RSS
+ * `domain`, Atom `scheme`): topics with no scheme, and those under a scheme
+ * the articles use for only one topic, form the plain group; a topic under
+ * two schemes goes in the group covering more articles. Groups come in order
+ * of how many articles they cover (then by scheme); topics in each by count,
+ * then name, as `topicCounts`.
+ */
+export function topicGroups(entries: readonly FilterEntry[]): TopicCount[][] {
+  const pairs = entries.map(schemedTopics);
+  const grouping = groupingSchemes(pairs);
+  const articles = new Map<string, number>();
+  const schemesOf = new Map<string, Set<string>>();
+  for (const article of pairs) {
+    const grouped = article.map(([key, scheme]): [string, string] => [
+      key,
+      grouping.has(scheme) ? scheme : "",
+    ]);
+    for (const used of new Set(grouped.map(([, scheme]) => scheme))) {
+      countUp(articles, used);
+    }
+    for (const [key, scheme] of grouped) {
+      schemesOf.set(key, (schemesOf.get(key) ?? new Set()).add(scheme));
+    }
+  }
+  const groups = new Map<string, TopicCount[]>();
+  for (const counted of topicCounts(entries)) {
+    const schemes = [...(schemesOf.get(topicKey(counted.topic)) ?? [""])];
+    const scheme = schemes.reduce((best, other) =>
+      largerScheme(best, other, articles),
+    );
+    groups.set(scheme, [...(groups.get(scheme) ?? []), counted]);
+  }
+  return [...groups]
+    .sort(
+      ([first], [second]) =>
+        (articles.get(second) ?? 0) - (articles.get(first) ?? 0) ||
+        (first < second ? -1 : Number(first > second)),
+    )
+    .map(([, topics]) => topics);
+}
+
+/** Each topic's group and place in it, by its trimmed lower-case form, from `topicGroups`. */
+export interface GroupOrder {
+  /** Index of the topic's group. */
+  group: Map<string, number>;
+  /** Place of the topic within its group. */
+  rank: Map<string, number>;
+}
+
+/** Where each topic sits in the view's groups; built once per view. */
+export function groupOrder(groups: readonly TopicCount[][]): GroupOrder {
+  const order: GroupOrder = { group: new Map(), rank: new Map() };
+  for (const [index, topics] of groups.entries()) {
+    for (const [rank, { topic }] of topics.entries()) {
+      order.group.set(topicKey(topic), index);
+      order.rank.set(topicKey(topic), rank);
+    }
+  }
+  return order;
+}
+
+/**
+ * An article's topics as rows, one per group of the view it has topics in,
+ * in the view's order (`groupOrder`); topics the view does not know form a
+ * last row, by name.
+ */
+export function articleTopicGroups(
+  categories: readonly string[],
+  order: GroupOrder,
+): string[][] {
+  const rows = new Map<number, { topic: string; rank: number }[]>();
+  const seen = new Set<string>();
+  for (const topic of categories) {
+    const key = topicKey(topic);
+    if (key !== "" && !seen.has(key)) {
+      seen.add(key);
+      const group = order.group.get(key) ?? Number.POSITIVE_INFINITY;
+      const rank = order.rank.get(key) ?? Number.POSITIVE_INFINITY;
+      rows.set(group, [...(rows.get(group) ?? []), { topic, rank }]);
+    }
+  }
+  return [...rows]
+    .sort(([first], [second]) => first - second)
+    .map(([, topics]) =>
+      topics
+        .sort(
+          (first, second) =>
+            first.rank - second.rank || compareNames(first.topic, second.topic),
+        )
+        .map(({ topic }) => topic),
+    );
 }
 
 /** Whether an article stays after the settings' filters are applied. */

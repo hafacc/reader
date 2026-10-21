@@ -84,9 +84,16 @@ export const copy = {
   removeWord: (word: string): string => `Remove ${word}`,
   filterHint:
     "Words match whole words in the title or summary, ignoring capitals and spacing.",
+  /** Label of a row of topic chips, for screen readers. */
   topics: "Topics",
-  topicsHint:
-    "Select a topic to turn it off. Articles with only turned-off topics are hidden.",
+  /** Label of the row of section chips, for screen readers. */
+  sections: "Sections",
+  /** Heading over a view's section and topic chips, and the article's filter button and sheet. */
+  filters: "Filters",
+  /** The article's filter button while any of its sections or topics is turned off, for screen readers. */
+  filtersSomeOff: "Filters, some turned off",
+  filtersHint:
+    "Select a section or topic to turn it off. Articles in a turned-off section, or whose topics are all turned off, are hidden.",
   nameLabel: "Name",
   groupLabel: "Group",
   noGroup: "No group",

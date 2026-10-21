@@ -44,12 +44,13 @@ service cloud.firestore {
     }
 
     // Entries are written whole, or merged over a whole one, so every field
-    // but bodyHash and expireAt is present after the write.
+    // but bodyHash, expireAt, categorySchemes and sourceUrl is present after
+    // the write; older clients write neither of the last two.
     function entry(data) {
       return data.keys().hasOnly(['feedId', 'guid', 'title', 'published',
           'dated', 'url', 'author', 'imageUrl', 'excerpt', 'summary',
-          'categories', 'bodyHash', 'read', 'starred', 'addedAt', 'updatedAt',
-          'expireAt', 'syncedAt'])
+          'categories', 'categorySchemes', 'sourceUrl', 'bodyHash', 'read',
+          'starred', 'addedAt', 'updatedAt', 'expireAt', 'syncedAt'])
         && data.keys().hasAll(['feedId', 'guid', 'title', 'published',
           'dated', 'url', 'author', 'imageUrl', 'excerpt', 'summary',
           'categories', 'read', 'starred', 'addedAt', 'updatedAt', 'syncedAt'])
@@ -64,6 +65,10 @@ service cloud.firestore {
         && text(data.excerpt, 1000)
         && text(data.summary, 20000)
         && data.categories is list && data.categories.size() <= 100
+        && (!('categorySchemes' in data)
+          || (data.categorySchemes is list
+            && data.categorySchemes.size() <= 100))
+        && (!('sourceUrl' in data) || address(data.sourceUrl))
         && (!('bodyHash' in data) || text(data.bodyHash, 128))
         && data.read is bool
         && data.starred is bool

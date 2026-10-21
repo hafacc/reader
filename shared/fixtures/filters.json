@@ -1,0 +1,2563 @@
+{
+  "names": {
+    "input": [
+      "7.1",
+      "7-1",
+      "owa",
+      "Owa",
+      "OWA",
+      "Éclair",
+      "eclair",
+      "Zebra",
+      "zèbre",
+      "_under",
+      "Ångström",
+      "apple",
+      "Apple pie",
+      "apple-pie",
+      "10",
+      "9",
+      "Ünïcode",
+      "unicode"
+    ],
+    "output": [
+      "10",
+      "7-1",
+      "7.1",
+      "9",
+      "_under",
+      "Ångström",
+      "apple",
+      "Apple pie",
+      "apple-pie",
+      "eclair",
+      "Éclair",
+      "OWA",
+      "Owa",
+      "owa",
+      "unicode",
+      "Ünïcode",
+      "Zebra",
+      "zèbre"
+    ]
+  },
+  "feeds": [
+    {
+      "name": "nyt",
+      "input": [
+        {
+          "url": "https://www.nytimes.com/2026/10/19/us/politics/trump-midterm-rally-red-states.html",
+          "sourceUrl": "",
+          "categories": [
+            "Elections",
+            "Midterm Elections (2026)",
+            "Trump, Donald J",
+            "Vance, J D"
+          ],
+          "categorySchemes": [
+            "http://www.nytimes.com/namespaces/keywords/des",
+            "http://www.nytimes.com/namespaces/keywords/des",
+            "http://www.nytimes.com/namespaces/keywords/nyt_per",
+            "http://www.nytimes.com/namespaces/keywords/nyt_per"
+          ]
+        },
+        {
+          "url": "https://www.nytimes.com/video/us/100000011219687/trump-campaigns-for-republicans-as-turmoil-mounts-in-washington.html",
+          "sourceUrl": "",
+          "categories": [
+            "United States Politics and Government",
+            "Midterm Elections (2026)",
+            "Trump, Donald J",
+            "United States"
+          ],
+          "categorySchemes": [
+            "http://www.nytimes.com/namespaces/keywords/des",
+            "http://www.nytimes.com/namespaces/keywords/des",
+            "http://www.nytimes.com/namespaces/keywords/nyt_per",
+            "http://www.nytimes.com/namespaces/keywords/nyt_geo"
+          ]
+        },
+        {
+          "url": "https://www.nytimes.com/2026/10/19/us/politics/trump-midterms-republican-political-ads.html",
+          "sourceUrl": "",
+          "categories": [
+            "United States Politics and Government",
+            "Political Advertising",
+            "Midterm Elections (2026)",
+            "Democratic Party"
+          ],
+          "categorySchemes": [
+            "http://www.nytimes.com/namespaces/keywords/des",
+            "http://www.nytimes.com/namespaces/keywords/des",
+            "http://www.nytimes.com/namespaces/keywords/des",
+            "http://www.nytimes.com/namespaces/keywords/nyt_org"
+          ]
+        },
+        {
+          "url": "https://www.nytimes.com/2026/10/19/briefing/france-imposes-curfews.html",
+          "sourceUrl": "",
+          "categories": [],
+          "categorySchemes": []
+        },
+        {
+          "url": "https://www.nytimes.com/2026/10/19/world/europe/france-protests-riots.html",
+          "sourceUrl": "",
+          "categories": [
+            "France",
+            "Curfews",
+            "Demonstrations, Protests and Riots",
+            "Politics and Government"
+          ],
+          "categorySchemes": [
+            "http://www.nytimes.com/namespaces/keywords/nyt_geo",
+            "http://www.nytimes.com/namespaces/keywords/des",
+            "http://www.nytimes.com/namespaces/keywords/des",
+            "http://www.nytimes.com/namespaces/keywords/des"
+          ]
+        },
+        {
+          "url": "https://www.nytimes.com/2026/10/19/world/europe/france-protests-violence-police-response.html",
+          "sourceUrl": "",
+          "categories": [
+            "France",
+            "Demonstrations, Protests and Riots",
+            "Police",
+            "Tear Gas"
+          ],
+          "categorySchemes": [
+            "http://www.nytimes.com/namespaces/keywords/nyt_geo",
+            "http://www.nytimes.com/namespaces/keywords/des",
+            "http://www.nytimes.com/namespaces/keywords/des",
+            "http://www.nytimes.com/namespaces/keywords/des"
+          ]
+        },
+        {
+          "url": "https://www.nytimes.com/article/france-student-protests-why.html",
+          "sourceUrl": "",
+          "categories": [
+            "Education (K-12)",
+            "Demonstrations, Protests and Riots",
+            "Teachers and School Employees",
+            "Shortages"
+          ],
+          "categorySchemes": [
+            "http://www.nytimes.com/namespaces/keywords/des",
+            "http://www.nytimes.com/namespaces/keywords/des",
+            "http://www.nytimes.com/namespaces/keywords/des",
+            "http://www.nytimes.com/namespaces/keywords/des"
+          ]
+        },
+        {
+          "url": "https://www.nytimes.com/2026/10/19/us/politics/trump-washington-golf-course.html",
+          "sourceUrl": "",
+          "categories": [
+            "United States Politics and Government",
+            "Suits and Litigation (Civil)",
+            "Federal Courts (US)",
+            "Courts and the Judiciary"
+          ],
+          "categorySchemes": [
+            "http://www.nytimes.com/namespaces/keywords/des",
+            "http://www.nytimes.com/namespaces/keywords/des",
+            "http://www.nytimes.com/namespaces/keywords/des",
+            "http://www.nytimes.com/namespaces/keywords/des"
+          ]
+        },
+        {
+          "url": "https://www.nytimes.com/2026/10/19/us/politics/supreme-court-mahmoud-khalil-deportation.html",
+          "sourceUrl": "",
+          "categories": [
+            "Pro-Palestinian Campus Protests (2023- )",
+            "Deportation",
+            "Freedom of Speech and Expression",
+            "Immigration Detention"
+          ],
+          "categorySchemes": [
+            "http://www.nytimes.com/namespaces/keywords/des",
+            "http://www.nytimes.com/namespaces/keywords/des",
+            "http://www.nytimes.com/namespaces/keywords/des",
+            "http://www.nytimes.com/namespaces/keywords/des"
+          ]
+        },
+        {
+          "url": "https://www.nytimes.com/2026/10/19/us/ice-hospitalization-us-citizen.html",
+          "sourceUrl": "",
+          "categories": [
+            "Immigration Detention",
+            "Deportation",
+            "Immigration and Customs Enforcement (US)",
+            "California"
+          ],
+          "categorySchemes": [
+            "http://www.nytimes.com/namespaces/keywords/des",
+            "http://www.nytimes.com/namespaces/keywords/des",
+            "http://www.nytimes.com/namespaces/keywords/nyt_org",
+            "http://www.nytimes.com/namespaces/keywords/nyt_geo"
+          ]
+        },
+        {
+          "url": "https://www.nytimes.com/2026/10/19/us/ice-death-laredo-texas-medicine.html",
+          "sourceUrl": "",
+          "categories": [
+            "Immigration Detention",
+            "Illegal Immigration",
+            "United States Politics and Government",
+            "Immigration and Customs Enforcement (US)"
+          ],
+          "categorySchemes": [
+            "http://www.nytimes.com/namespaces/keywords/des",
+            "http://www.nytimes.com/namespaces/keywords/des",
+            "http://www.nytimes.com/namespaces/keywords/des",
+            "http://www.nytimes.com/namespaces/keywords/nyt_org"
+          ]
+        },
+        {
+          "url": "https://www.nytimes.com/2026/10/19/dining/copenhagen-denmark-bread-bmo.html",
+          "sourceUrl": "",
+          "categories": [
+            "Bakeries and Baked Products",
+            "Cheese",
+            "Copenhagen (Denmark)"
+          ],
+          "categorySchemes": [
+            "http://www.nytimes.com/namespaces/keywords/des",
+            "http://www.nytimes.com/namespaces/keywords/des",
+            "http://www.nytimes.com/namespaces/keywords/nyt_geo"
+          ]
+        },
+        {
+          "url": "https://www.nytimes.com/2026/10/19/us/california-climate-change-warning.html",
+          "sourceUrl": "",
+          "categories": [
+            "Wildfires",
+            "Floods",
+            "Global Warming",
+            "Weather"
+          ],
+          "categorySchemes": [
+            "http://www.nytimes.com/namespaces/keywords/des",
+            "http://www.nytimes.com/namespaces/keywords/des",
+            "http://www.nytimes.com/namespaces/keywords/des",
+            "http://www.nytimes.com/namespaces/keywords/des"
+          ]
+        },
+        {
+          "url": "https://www.nytimes.com/2026/10/19/climate/tree-pandemics-northeast-forests.html",
+          "sourceUrl": "",
+          "categories": [
+            "Trees and Shrubs",
+            "Invasive Species",
+            "Global Warming",
+            "New York State"
+          ],
+          "categorySchemes": [
+            "http://www.nytimes.com/namespaces/keywords/des",
+            "http://www.nytimes.com/namespaces/keywords/des",
+            "http://www.nytimes.com/namespaces/keywords/des",
+            "http://www.nytimes.com/namespaces/keywords/nyt_geo"
+          ]
+        },
+        {
+          "url": "https://www.nytimes.com/2026/10/19/us/bend-school-shooting-accountability.html",
+          "sourceUrl": "",
+          "categories": [
+            "Silver Rail Elementary, Bend, Ore, Shooting (2026)",
+            "Gun Control",
+            "Law and Legislation",
+            "Bend (Ore)"
+          ],
+          "categorySchemes": [
+            "http://www.nytimes.com/namespaces/keywords/des",
+            "http://www.nytimes.com/namespaces/keywords/des",
+            "http://www.nytimes.com/namespaces/keywords/des",
+            "http://www.nytimes.com/namespaces/keywords/nyt_geo"
+          ]
+        },
+        {
+          "url": "https://www.nytimes.com/2026/10/19/magazine/penelope-cruz-acting-career.html",
+          "sourceUrl": "",
+          "categories": [
+            "Cruz, Penelope",
+            "La Bola Negra (Movie)",
+            "The Invite (Movie)",
+            "Movies"
+          ],
+          "categorySchemes": [
+            "http://www.nytimes.com/namespaces/keywords/nyt_per",
+            "http://www.nytimes.com/namespaces/keywords/nyt_ttl",
+            "http://www.nytimes.com/namespaces/keywords/nyt_ttl",
+            "http://www.nytimes.com/namespaces/keywords/des"
+          ]
+        },
+        {
+          "url": "https://www.nytimes.com/2026/10/19/world/canada/alberta-secession-canada-referendum.html",
+          "sourceUrl": "",
+          "categories": [
+            "Canada",
+            "Alberta (Canada)",
+            "Secession and Independence Movements",
+            "Referendums"
+          ],
+          "categorySchemes": [
+            "http://www.nytimes.com/namespaces/keywords/nyt_geo",
+            "http://www.nytimes.com/namespaces/keywords/nyt_geo",
+            "http://www.nytimes.com/namespaces/keywords/des",
+            "http://www.nytimes.com/namespaces/keywords/des"
+          ]
+        },
+        {
+          "url": "https://www.nytimes.com/2026/10/19/world/europe/trump-zelensky-putin-ukraine-war.html",
+          "sourceUrl": "",
+          "categories": [
+            "Russian Invasion of Ukraine (2022)",
+            "United States Politics and Government",
+            "United States International Relations",
+            "Putin, Vladimir V"
+          ],
+          "categorySchemes": [
+            "http://www.nytimes.com/namespaces/keywords/des",
+            "http://www.nytimes.com/namespaces/keywords/des",
+            "http://www.nytimes.com/namespaces/keywords/des",
+            "http://www.nytimes.com/namespaces/keywords/nyt_per"
+          ]
+        },
+        {
+          "url": "https://www.nytimes.com/2026/10/19/science/russia-satellite-kosmos-2612.html",
+          "sourceUrl": "",
+          "categories": [
+            "Satellites",
+            "Space and Astronomy",
+            "Russian Invasion of Ukraine (2022)",
+            "Defense and Military Forces"
+          ],
+          "categorySchemes": [
+            "http://www.nytimes.com/namespaces/keywords/des",
+            "http://www.nytimes.com/namespaces/keywords/des",
+            "http://www.nytimes.com/namespaces/keywords/des",
+            "http://www.nytimes.com/namespaces/keywords/des"
+          ]
+        },
+        {
+          "url": "https://www.nytimes.com/2026/10/19/opinion/high-school-new-york-city-application.html",
+          "sourceUrl": "",
+          "categories": [
+            "Education (K-12)",
+            "Parenting",
+            "New York City",
+            "Admissions Standards"
+          ],
+          "categorySchemes": [
+            "http://www.nytimes.com/namespaces/keywords/des",
+            "http://www.nytimes.com/namespaces/keywords/des",
+            "http://www.nytimes.com/namespaces/keywords/nyt_geo",
+            "http://www.nytimes.com/namespaces/keywords/des"
+          ]
+        },
+        {
+          "url": "https://www.nytimes.com/2026/10/19/opinion/republican-party-trump-future.html",
+          "sourceUrl": "",
+          "categories": [
+            "United States Politics and Government",
+            "Midterm Elections (2026)",
+            "Conservatism (US Politics)",
+            "Hispanic-Americans"
+          ],
+          "categorySchemes": [
+            "http://www.nytimes.com/namespaces/keywords/des",
+            "http://www.nytimes.com/namespaces/keywords/des",
+            "http://www.nytimes.com/namespaces/keywords/des",
+            "http://www.nytimes.com/namespaces/keywords/des"
+          ]
+        },
+        {
+          "url": "https://www.nytimes.com/2026/10/19/world/canada/alberta-referendum-danielle-smith.html",
+          "sourceUrl": "",
+          "categories": [
+            "Referendums",
+            "Secession and Independence Movements",
+            "Smith, Danielle (1971- )",
+            "Alberta (Canada)"
+          ],
+          "categorySchemes": [
+            "http://www.nytimes.com/namespaces/keywords/des",
+            "http://www.nytimes.com/namespaces/keywords/des",
+            "http://www.nytimes.com/namespaces/keywords/nyt_per",
+            "http://www.nytimes.com/namespaces/keywords/nyt_geo"
+          ]
+        }
+      ],
+      "output": {
+        "sections": [
+          [
+            {
+              "label": "us",
+              "place": "nytimes.com/us"
+            },
+            {
+              "label": "us/politics",
+              "place": "nytimes.com/us/politics"
+            }
+          ],
+          [],
+          [
+            {
+              "label": "us",
+              "place": "nytimes.com/us"
+            },
+            {
+              "label": "us/politics",
+              "place": "nytimes.com/us/politics"
+            }
+          ],
+          [],
+          [
+            {
+              "label": "world",
+              "place": "nytimes.com/world"
+            },
+            {
+              "label": "world/europe",
+              "place": "nytimes.com/world/europe"
+            }
+          ],
+          [
+            {
+              "label": "world",
+              "place": "nytimes.com/world"
+            },
+            {
+              "label": "world/europe",
+              "place": "nytimes.com/world/europe"
+            }
+          ],
+          [],
+          [
+            {
+              "label": "us",
+              "place": "nytimes.com/us"
+            },
+            {
+              "label": "us/politics",
+              "place": "nytimes.com/us/politics"
+            }
+          ],
+          [
+            {
+              "label": "us",
+              "place": "nytimes.com/us"
+            },
+            {
+              "label": "us/politics",
+              "place": "nytimes.com/us/politics"
+            }
+          ],
+          [
+            {
+              "label": "us",
+              "place": "nytimes.com/us"
+            }
+          ],
+          [
+            {
+              "label": "us",
+              "place": "nytimes.com/us"
+            }
+          ],
+          [],
+          [
+            {
+              "label": "us",
+              "place": "nytimes.com/us"
+            }
+          ],
+          [],
+          [
+            {
+              "label": "us",
+              "place": "nytimes.com/us"
+            }
+          ],
+          [],
+          [
+            {
+              "label": "world",
+              "place": "nytimes.com/world"
+            },
+            {
+              "label": "world/canada",
+              "place": "nytimes.com/world/canada"
+            }
+          ],
+          [
+            {
+              "label": "world",
+              "place": "nytimes.com/world"
+            },
+            {
+              "label": "world/europe",
+              "place": "nytimes.com/world/europe"
+            }
+          ],
+          [],
+          [
+            {
+              "label": "opinion",
+              "place": "nytimes.com/opinion"
+            }
+          ],
+          [
+            {
+              "label": "opinion",
+              "place": "nytimes.com/opinion"
+            }
+          ],
+          [
+            {
+              "label": "world",
+              "place": "nytimes.com/world"
+            },
+            {
+              "label": "world/canada",
+              "place": "nytimes.com/world/canada"
+            }
+          ]
+        ],
+        "counts": [
+          {
+            "label": "us",
+            "place": "nytimes.com/us",
+            "count": 8
+          },
+          {
+            "label": "us/politics",
+            "place": "nytimes.com/us/politics",
+            "count": 4
+          },
+          {
+            "label": "world",
+            "place": "nytimes.com/world",
+            "count": 5
+          },
+          {
+            "label": "world/europe",
+            "place": "nytimes.com/world/europe",
+            "count": 3
+          },
+          {
+            "label": "world/canada",
+            "place": "nytimes.com/world/canada",
+            "count": 2
+          },
+          {
+            "label": "opinion",
+            "place": "nytimes.com/opinion",
+            "count": 2
+          }
+        ],
+        "groups": [
+          [
+            {
+              "topic": "United States Politics and Government",
+              "count": 6
+            },
+            {
+              "topic": "Midterm Elections (2026)",
+              "count": 4
+            },
+            {
+              "topic": "Demonstrations, Protests and Riots",
+              "count": 3
+            },
+            {
+              "topic": "Immigration Detention",
+              "count": 3
+            },
+            {
+              "topic": "Deportation",
+              "count": 2
+            },
+            {
+              "topic": "Education (K-12)",
+              "count": 2
+            },
+            {
+              "topic": "Global Warming",
+              "count": 2
+            },
+            {
+              "topic": "Referendums",
+              "count": 2
+            },
+            {
+              "topic": "Russian Invasion of Ukraine (2022)",
+              "count": 2
+            },
+            {
+              "topic": "Secession and Independence Movements",
+              "count": 2
+            },
+            {
+              "topic": "Admissions Standards",
+              "count": 1
+            },
+            {
+              "topic": "Bakeries and Baked Products",
+              "count": 1
+            },
+            {
+              "topic": "Cheese",
+              "count": 1
+            },
+            {
+              "topic": "Conservatism (US Politics)",
+              "count": 1
+            },
+            {
+              "topic": "Courts and the Judiciary",
+              "count": 1
+            },
+            {
+              "topic": "Curfews",
+              "count": 1
+            },
+            {
+              "topic": "Defense and Military Forces",
+              "count": 1
+            },
+            {
+              "topic": "Elections",
+              "count": 1
+            },
+            {
+              "topic": "Federal Courts (US)",
+              "count": 1
+            },
+            {
+              "topic": "Floods",
+              "count": 1
+            },
+            {
+              "topic": "Freedom of Speech and Expression",
+              "count": 1
+            },
+            {
+              "topic": "Gun Control",
+              "count": 1
+            },
+            {
+              "topic": "Hispanic-Americans",
+              "count": 1
+            },
+            {
+              "topic": "Illegal Immigration",
+              "count": 1
+            },
+            {
+              "topic": "Invasive Species",
+              "count": 1
+            },
+            {
+              "topic": "Law and Legislation",
+              "count": 1
+            },
+            {
+              "topic": "Movies",
+              "count": 1
+            },
+            {
+              "topic": "Parenting",
+              "count": 1
+            },
+            {
+              "topic": "Police",
+              "count": 1
+            },
+            {
+              "topic": "Political Advertising",
+              "count": 1
+            },
+            {
+              "topic": "Politics and Government",
+              "count": 1
+            },
+            {
+              "topic": "Pro-Palestinian Campus Protests (2023- )",
+              "count": 1
+            },
+            {
+              "topic": "Satellites",
+              "count": 1
+            },
+            {
+              "topic": "Shortages",
+              "count": 1
+            },
+            {
+              "topic": "Silver Rail Elementary, Bend, Ore, Shooting (2026)",
+              "count": 1
+            },
+            {
+              "topic": "Space and Astronomy",
+              "count": 1
+            },
+            {
+              "topic": "Suits and Litigation (Civil)",
+              "count": 1
+            },
+            {
+              "topic": "Teachers and School Employees",
+              "count": 1
+            },
+            {
+              "topic": "Tear Gas",
+              "count": 1
+            },
+            {
+              "topic": "Trees and Shrubs",
+              "count": 1
+            },
+            {
+              "topic": "United States International Relations",
+              "count": 1
+            },
+            {
+              "topic": "Weather",
+              "count": 1
+            },
+            {
+              "topic": "Wildfires",
+              "count": 1
+            }
+          ],
+          [
+            {
+              "topic": "Alberta (Canada)",
+              "count": 2
+            },
+            {
+              "topic": "France",
+              "count": 2
+            },
+            {
+              "topic": "Bend (Ore)",
+              "count": 1
+            },
+            {
+              "topic": "California",
+              "count": 1
+            },
+            {
+              "topic": "Canada",
+              "count": 1
+            },
+            {
+              "topic": "Copenhagen (Denmark)",
+              "count": 1
+            },
+            {
+              "topic": "New York City",
+              "count": 1
+            },
+            {
+              "topic": "New York State",
+              "count": 1
+            },
+            {
+              "topic": "United States",
+              "count": 1
+            }
+          ],
+          [
+            {
+              "topic": "Trump, Donald J",
+              "count": 2
+            },
+            {
+              "topic": "Cruz, Penelope",
+              "count": 1
+            },
+            {
+              "topic": "Putin, Vladimir V",
+              "count": 1
+            },
+            {
+              "topic": "Smith, Danielle (1971- )",
+              "count": 1
+            },
+            {
+              "topic": "Vance, J D",
+              "count": 1
+            }
+          ],
+          [
+            {
+              "topic": "Immigration and Customs Enforcement (US)",
+              "count": 2
+            },
+            {
+              "topic": "Democratic Party",
+              "count": 1
+            }
+          ],
+          [
+            {
+              "topic": "La Bola Negra (Movie)",
+              "count": 1
+            },
+            {
+              "topic": "The Invite (Movie)",
+              "count": 1
+            }
+          ]
+        ],
+        "articleTopics": [
+          [
+            [
+              "Midterm Elections (2026)",
+              "Elections"
+            ],
+            [
+              "Trump, Donald J",
+              "Vance, J D"
+            ]
+          ],
+          [
+            [
+              "United States Politics and Government",
+              "Midterm Elections (2026)"
+            ],
+            [
+              "United States"
+            ],
+            [
+              "Trump, Donald J"
+            ]
+          ],
+          [
+            [
+              "United States Politics and Government",
+              "Midterm Elections (2026)",
+              "Political Advertising"
+            ],
+            [
+              "Democratic Party"
+            ]
+          ],
+          [],
+          [
+            [
+              "Demonstrations, Protests and Riots",
+              "Curfews",
+              "Politics and Government"
+            ],
+            [
+              "France"
+            ]
+          ],
+          [
+            [
+              "Demonstrations, Protests and Riots",
+              "Police",
+              "Tear Gas"
+            ],
+            [
+              "France"
+            ]
+          ],
+          [
+            [
+              "Demonstrations, Protests and Riots",
+              "Education (K-12)",
+              "Shortages",
+              "Teachers and School Employees"
+            ]
+          ],
+          [
+            [
+              "United States Politics and Government",
+              "Courts and the Judiciary",
+              "Federal Courts (US)",
+              "Suits and Litigation (Civil)"
+            ]
+          ],
+          [
+            [
+              "Immigration Detention",
+              "Deportation",
+              "Freedom of Speech and Expression",
+              "Pro-Palestinian Campus Protests (2023- )"
+            ]
+          ],
+          [
+            [
+              "Immigration Detention",
+              "Deportation"
+            ],
+            [
+              "California"
+            ],
+            [
+              "Immigration and Customs Enforcement (US)"
+            ]
+          ],
+          [
+            [
+              "United States Politics and Government",
+              "Immigration Detention",
+              "Illegal Immigration"
+            ],
+            [
+              "Immigration and Customs Enforcement (US)"
+            ]
+          ],
+          [
+            [
+              "Bakeries and Baked Products",
+              "Cheese"
+            ],
+            [
+              "Copenhagen (Denmark)"
+            ]
+          ],
+          [
+            [
+              "Global Warming",
+              "Floods",
+              "Weather",
+              "Wildfires"
+            ]
+          ],
+          [
+            [
+              "Global Warming",
+              "Invasive Species",
+              "Trees and Shrubs"
+            ],
+            [
+              "New York State"
+            ]
+          ],
+          [
+            [
+              "Gun Control",
+              "Law and Legislation",
+              "Silver Rail Elementary, Bend, Ore, Shooting (2026)"
+            ],
+            [
+              "Bend (Ore)"
+            ]
+          ],
+          [
+            [
+              "Movies"
+            ],
+            [
+              "Cruz, Penelope"
+            ],
+            [
+              "La Bola Negra (Movie)",
+              "The Invite (Movie)"
+            ]
+          ],
+          [
+            [
+              "Referendums",
+              "Secession and Independence Movements"
+            ],
+            [
+              "Alberta (Canada)",
+              "Canada"
+            ]
+          ],
+          [
+            [
+              "United States Politics and Government",
+              "Russian Invasion of Ukraine (2022)",
+              "United States International Relations"
+            ],
+            [
+              "Putin, Vladimir V"
+            ]
+          ],
+          [
+            [
+              "Russian Invasion of Ukraine (2022)",
+              "Defense and Military Forces",
+              "Satellites",
+              "Space and Astronomy"
+            ]
+          ],
+          [
+            [
+              "Education (K-12)",
+              "Admissions Standards",
+              "Parenting"
+            ],
+            [
+              "New York City"
+            ]
+          ],
+          [
+            [
+              "United States Politics and Government",
+              "Midterm Elections (2026)",
+              "Conservatism (US Politics)",
+              "Hispanic-Americans"
+            ]
+          ],
+          [
+            [
+              "Referendums",
+              "Secession and Independence Movements"
+            ],
+            [
+              "Alberta (Canada)"
+            ],
+            [
+              "Smith, Danielle (1971- )"
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "name": "atlantic",
+      "input": [
+        {
+          "url": "https://www.theatlantic.com/technology/2026/10/americans-not-buying-electric-cars/689071/",
+          "sourceUrl": "",
+          "categories": [],
+          "categorySchemes": []
+        },
+        {
+          "url": "https://www.theatlantic.com/newsletters/2026/10/what-trump-france-protest-comments-reveal/689073/",
+          "sourceUrl": "",
+          "categories": [],
+          "categorySchemes": []
+        },
+        {
+          "url": "https://www.theatlantic.com/science/2026/10/yosemite-fires/689069/",
+          "sourceUrl": "",
+          "categories": [],
+          "categorySchemes": []
+        },
+        {
+          "url": "https://www.theatlantic.com/technology/2026/10/blocking-internet-archive-will-not-stop-ai/689065/",
+          "sourceUrl": "",
+          "categories": [],
+          "categorySchemes": []
+        },
+        {
+          "url": "https://www.theatlantic.com/ideas/2026/10/constitution-trump-doj-supreme-court-corruption/689042/",
+          "sourceUrl": "",
+          "categories": [],
+          "categorySchemes": []
+        },
+        {
+          "url": "https://www.theatlantic.com/ideas/2026/10/liberalism-fukuyama-shklar-trump/689040/",
+          "sourceUrl": "",
+          "categories": [],
+          "categorySchemes": []
+        },
+        {
+          "url": "https://www.theatlantic.com/books/2026/10/sarah-anderson-fallow-ultimate-would-you-rather-novel-book-review/689064/",
+          "sourceUrl": "",
+          "categories": [],
+          "categorySchemes": []
+        },
+        {
+          "url": "https://www.theatlantic.com/ideas/2026/10/mamdani-leftist-moderate-new-york/689053/",
+          "sourceUrl": "",
+          "categories": [],
+          "categorySchemes": []
+        },
+        {
+          "url": "https://www.theatlantic.com/international/2026/10/canada-military-buildup-defense/689041/",
+          "sourceUrl": "",
+          "categories": [],
+          "categorySchemes": []
+        },
+        {
+          "url": "https://www.theatlantic.com/politics/2026/10/susan-collins-maine-debate-troy-jackson/689037/",
+          "sourceUrl": "",
+          "categories": [],
+          "categorySchemes": []
+        },
+        {
+          "url": "https://www.theatlantic.com/politics/2026/10/democratic-party-big-tech/689008/",
+          "sourceUrl": "",
+          "categories": [],
+          "categorySchemes": []
+        },
+        {
+          "url": "https://www.theatlantic.com/ideas/2026/10/trump-putin/689067/",
+          "sourceUrl": "",
+          "categories": [],
+          "categorySchemes": []
+        },
+        {
+          "url": "https://www.theatlantic.com/ideas/2026/10/america-now-ally-russia/689066/",
+          "sourceUrl": "",
+          "categories": [],
+          "categorySchemes": []
+        },
+        {
+          "url": "https://www.theatlantic.com/books/2026/10/poem-j-mae-barizo-catalog/689060/",
+          "sourceUrl": "",
+          "categories": [],
+          "categorySchemes": []
+        }
+      ],
+      "output": {
+        "sections": [
+          [
+            {
+              "label": "technology",
+              "place": "theatlantic.com/technology"
+            }
+          ],
+          [],
+          [],
+          [
+            {
+              "label": "technology",
+              "place": "theatlantic.com/technology"
+            }
+          ],
+          [
+            {
+              "label": "ideas",
+              "place": "theatlantic.com/ideas"
+            }
+          ],
+          [
+            {
+              "label": "ideas",
+              "place": "theatlantic.com/ideas"
+            }
+          ],
+          [
+            {
+              "label": "books",
+              "place": "theatlantic.com/books"
+            }
+          ],
+          [
+            {
+              "label": "ideas",
+              "place": "theatlantic.com/ideas"
+            }
+          ],
+          [],
+          [
+            {
+              "label": "politics",
+              "place": "theatlantic.com/politics"
+            }
+          ],
+          [
+            {
+              "label": "politics",
+              "place": "theatlantic.com/politics"
+            }
+          ],
+          [
+            {
+              "label": "ideas",
+              "place": "theatlantic.com/ideas"
+            }
+          ],
+          [
+            {
+              "label": "ideas",
+              "place": "theatlantic.com/ideas"
+            }
+          ],
+          [
+            {
+              "label": "books",
+              "place": "theatlantic.com/books"
+            }
+          ]
+        ],
+        "counts": [
+          {
+            "label": "ideas",
+            "place": "theatlantic.com/ideas",
+            "count": 5
+          },
+          {
+            "label": "books",
+            "place": "theatlantic.com/books",
+            "count": 2
+          },
+          {
+            "label": "politics",
+            "place": "theatlantic.com/politics",
+            "count": 2
+          },
+          {
+            "label": "technology",
+            "place": "theatlantic.com/technology",
+            "count": 2
+          }
+        ],
+        "groups": [],
+        "articleTopics": [
+          [],
+          [],
+          [],
+          [],
+          [],
+          [],
+          [],
+          [],
+          [],
+          [],
+          [],
+          [],
+          [],
+          []
+        ]
+      }
+    },
+    {
+      "name": "hn",
+      "input": [
+        {
+          "url": "https://www.openbsd.org/80.html",
+          "sourceUrl": "",
+          "categories": [],
+          "categorySchemes": []
+        },
+        {
+          "url": "https://marc.info/?l=openbsd-misc&m=179245849770356&w=2",
+          "sourceUrl": "",
+          "categories": [],
+          "categorySchemes": []
+        },
+        {
+          "url": "https://trial.medpath.com/news/novo-nordisk-and-eli-lilly-report-glp-1-signals-of-slowed-biological-aging-at-ardd",
+          "sourceUrl": "",
+          "categories": [],
+          "categorySchemes": []
+        },
+        {
+          "url": "https://emilkowal.ski/ui/developing-taste",
+          "sourceUrl": "",
+          "categories": [],
+          "categorySchemes": []
+        },
+        {
+          "url": "https://efe.com/english/latest-news/2026-10-20/lula-supporters-protest-against-meta-to-denounce-its-electoral-interference/",
+          "sourceUrl": "",
+          "categories": [],
+          "categorySchemes": []
+        },
+        {
+          "url": "https://ipinfo.io/blog/france-fridges-hack",
+          "sourceUrl": "",
+          "categories": [],
+          "categorySchemes": []
+        },
+        {
+          "url": "https://redact.dev/blog/whatsapp-help-pages-hidden-ai-instructions",
+          "sourceUrl": "",
+          "categories": [],
+          "categorySchemes": []
+        },
+        {
+          "url": "https://projectdiscovery.io/research/how-abliterated-models-can-get-you-pwned",
+          "sourceUrl": "",
+          "categories": [],
+          "categorySchemes": []
+        },
+        {
+          "url": "https://marc.info/?l=openbsd-ports&m=179236125692175",
+          "sourceUrl": "",
+          "categories": [],
+          "categorySchemes": []
+        }
+      ],
+      "output": {
+        "sections": [
+          [
+            {
+              "label": "openbsd.org",
+              "place": "openbsd.org"
+            }
+          ],
+          [
+            {
+              "label": "marc.info",
+              "place": "marc.info"
+            }
+          ],
+          [
+            {
+              "label": "trial.medpath.com",
+              "place": "trial.medpath.com"
+            }
+          ],
+          [
+            {
+              "label": "emilkowal.ski",
+              "place": "emilkowal.ski"
+            }
+          ],
+          [
+            {
+              "label": "efe.com",
+              "place": "efe.com"
+            }
+          ],
+          [
+            {
+              "label": "ipinfo.io",
+              "place": "ipinfo.io"
+            }
+          ],
+          [
+            {
+              "label": "redact.dev",
+              "place": "redact.dev"
+            }
+          ],
+          [
+            {
+              "label": "projectdiscovery.io",
+              "place": "projectdiscovery.io"
+            }
+          ],
+          [
+            {
+              "label": "marc.info",
+              "place": "marc.info"
+            }
+          ]
+        ],
+        "counts": [
+          {
+            "label": "marc.info",
+            "place": "marc.info",
+            "count": 2
+          },
+          {
+            "label": "efe.com",
+            "place": "efe.com",
+            "count": 1
+          },
+          {
+            "label": "emilkowal.ski",
+            "place": "emilkowal.ski",
+            "count": 1
+          },
+          {
+            "label": "ipinfo.io",
+            "place": "ipinfo.io",
+            "count": 1
+          },
+          {
+            "label": "openbsd.org",
+            "place": "openbsd.org",
+            "count": 1
+          },
+          {
+            "label": "projectdiscovery.io",
+            "place": "projectdiscovery.io",
+            "count": 1
+          },
+          {
+            "label": "redact.dev",
+            "place": "redact.dev",
+            "count": 1
+          },
+          {
+            "label": "trial.medpath.com",
+            "place": "trial.medpath.com",
+            "count": 1
+          }
+        ],
+        "groups": [],
+        "articleTopics": [
+          [],
+          [],
+          [],
+          [],
+          [],
+          [],
+          [],
+          [],
+          []
+        ]
+      }
+    },
+    {
+      "name": "gnews",
+      "input": [
+        {
+          "url": "https://news.google.com/rss/articles/story0?oc=5",
+          "sourceUrl": "https://www.bbc.com/",
+          "categories": [],
+          "categorySchemes": []
+        },
+        {
+          "url": "https://news.google.com/rss/articles/story1?oc=5",
+          "sourceUrl": "https://www.npr.org/",
+          "categories": [],
+          "categorySchemes": []
+        },
+        {
+          "url": "https://news.google.com/rss/articles/story2?oc=5",
+          "sourceUrl": "https://www.foxnews.com/",
+          "categories": [],
+          "categorySchemes": []
+        },
+        {
+          "url": "https://news.google.com/rss/articles/story3?oc=5",
+          "sourceUrl": "https://www.axios.com/",
+          "categories": [],
+          "categorySchemes": []
+        },
+        {
+          "url": "https://news.google.com/rss/articles/story4?oc=5",
+          "sourceUrl": "https://apnews.com/",
+          "categories": [],
+          "categorySchemes": []
+        },
+        {
+          "url": "https://news.google.com/rss/articles/story5?oc=5",
+          "sourceUrl": "https://www.reuters.com/",
+          "categories": [],
+          "categorySchemes": []
+        },
+        {
+          "url": "https://news.google.com/rss/articles/story6?oc=5",
+          "sourceUrl": "https://www.cbsnews.com/",
+          "categories": [],
+          "categorySchemes": []
+        },
+        {
+          "url": "https://news.google.com/rss/articles/story7?oc=5",
+          "sourceUrl": "https://www.theguardian.com/",
+          "categories": [],
+          "categorySchemes": []
+        },
+        {
+          "url": "https://news.google.com/rss/articles/story8?oc=5",
+          "sourceUrl": "https://www.foxnews.com/",
+          "categories": [],
+          "categorySchemes": []
+        },
+        {
+          "url": "https://news.google.com/rss/articles/story9?oc=5",
+          "sourceUrl": "https://abc7.com/",
+          "categories": [],
+          "categorySchemes": []
+        },
+        {
+          "url": "https://news.google.com/rss/articles/story10?oc=5",
+          "sourceUrl": "https://www.timesofisrael.com/",
+          "categories": [],
+          "categorySchemes": []
+        },
+        {
+          "url": "https://news.google.com/rss/articles/story11?oc=5",
+          "sourceUrl": "https://www.bbc.com/",
+          "categories": [],
+          "categorySchemes": []
+        }
+      ],
+      "output": {
+        "sections": [
+          [
+            {
+              "label": "bbc.com",
+              "place": "bbc.com"
+            }
+          ],
+          [
+            {
+              "label": "npr.org",
+              "place": "npr.org"
+            }
+          ],
+          [
+            {
+              "label": "foxnews.com",
+              "place": "foxnews.com"
+            }
+          ],
+          [
+            {
+              "label": "axios.com",
+              "place": "axios.com"
+            }
+          ],
+          [
+            {
+              "label": "apnews.com",
+              "place": "apnews.com"
+            }
+          ],
+          [
+            {
+              "label": "reuters.com",
+              "place": "reuters.com"
+            }
+          ],
+          [
+            {
+              "label": "cbsnews.com",
+              "place": "cbsnews.com"
+            }
+          ],
+          [
+            {
+              "label": "theguardian.com",
+              "place": "theguardian.com"
+            }
+          ],
+          [
+            {
+              "label": "foxnews.com",
+              "place": "foxnews.com"
+            }
+          ],
+          [
+            {
+              "label": "abc7.com",
+              "place": "abc7.com"
+            }
+          ],
+          [
+            {
+              "label": "timesofisrael.com",
+              "place": "timesofisrael.com"
+            }
+          ],
+          [
+            {
+              "label": "bbc.com",
+              "place": "bbc.com"
+            }
+          ]
+        ],
+        "counts": [
+          {
+            "label": "bbc.com",
+            "place": "bbc.com",
+            "count": 2
+          },
+          {
+            "label": "foxnews.com",
+            "place": "foxnews.com",
+            "count": 2
+          },
+          {
+            "label": "abc7.com",
+            "place": "abc7.com",
+            "count": 1
+          },
+          {
+            "label": "apnews.com",
+            "place": "apnews.com",
+            "count": 1
+          },
+          {
+            "label": "axios.com",
+            "place": "axios.com",
+            "count": 1
+          },
+          {
+            "label": "cbsnews.com",
+            "place": "cbsnews.com",
+            "count": 1
+          },
+          {
+            "label": "npr.org",
+            "place": "npr.org",
+            "count": 1
+          },
+          {
+            "label": "reuters.com",
+            "place": "reuters.com",
+            "count": 1
+          },
+          {
+            "label": "theguardian.com",
+            "place": "theguardian.com",
+            "count": 1
+          },
+          {
+            "label": "timesofisrael.com",
+            "place": "timesofisrael.com",
+            "count": 1
+          }
+        ],
+        "groups": [],
+        "articleTopics": [
+          [],
+          [],
+          [],
+          [],
+          [],
+          [],
+          [],
+          [],
+          [],
+          [],
+          [],
+          []
+        ]
+      }
+    },
+    {
+      "name": "wordpress",
+      "input": [
+        {
+          "url": "https://wordpress.org/news/2026/10/wordpress-7-1-3-maintenance-and-security-release/",
+          "sourceUrl": "",
+          "categories": [
+            "Releases",
+            "Security"
+          ],
+          "categorySchemes": [
+            "",
+            ""
+          ]
+        },
+        {
+          "url": "https://wordpress.org/news/2026/09/wordpress-7-1-2-release/",
+          "sourceUrl": "",
+          "categories": [
+            "Releases",
+            "Security"
+          ],
+          "categorySchemes": [
+            "",
+            ""
+          ]
+        },
+        {
+          "url": "https://wordpress.org/news/2026/09/owa-president/",
+          "sourceUrl": "",
+          "categories": [
+            "General",
+            "Open Website Alliance",
+            "owa"
+          ],
+          "categorySchemes": [
+            "",
+            "",
+            ""
+          ]
+        },
+        {
+          "url": "https://wordpress.org/news/2026/09/wordpress-7-1-1-maintenance-and-security-release/",
+          "sourceUrl": "",
+          "categories": [
+            "Releases",
+            "Security"
+          ],
+          "categorySchemes": [
+            "",
+            ""
+          ]
+        },
+        {
+          "url": "https://wordpress.org/news/2026/09/108-student-websites/",
+          "sourceUrl": "",
+          "categories": [
+            "Education"
+          ],
+          "categorySchemes": [
+            ""
+          ]
+        },
+        {
+          "url": "https://wordpress.org/news/2026/08/open-weight/",
+          "sourceUrl": "",
+          "categories": [
+            "General",
+            "policy"
+          ],
+          "categorySchemes": [
+            "",
+            ""
+          ]
+        },
+        {
+          "url": "https://wordpress.org/news/2026/08/wcus-2026-recap/",
+          "sourceUrl": "",
+          "categories": [
+            "Community",
+            "Events",
+            "WordCamp",
+            "WCUS"
+          ],
+          "categorySchemes": [
+            "",
+            "",
+            "",
+            ""
+          ]
+        },
+        {
+          "url": "https://wordpress.org/news/2026/08/mary-lou/",
+          "sourceUrl": "",
+          "categories": [
+            "Releases",
+            "7-1",
+            "7.1",
+            "releases"
+          ],
+          "categorySchemes": [
+            "",
+            "",
+            "",
+            ""
+          ]
+        },
+        {
+          "url": "https://wordpress.org/news/2026/08/browser-extension/",
+          "sourceUrl": "",
+          "categories": [
+            "Development",
+            "General"
+          ],
+          "categorySchemes": [
+            "",
+            ""
+          ]
+        },
+        {
+          "url": "https://wordpress.org/news/2026/08/wordpress-7-0-4-release/",
+          "sourceUrl": "",
+          "categories": [
+            "Releases",
+            "Security",
+            "minor-releases",
+            "releases"
+          ],
+          "categorySchemes": [
+            "",
+            "",
+            "",
+            ""
+          ]
+        }
+      ],
+      "output": {
+        "sections": [
+          [],
+          [],
+          [],
+          [],
+          [],
+          [],
+          [],
+          [],
+          [],
+          []
+        ],
+        "counts": [],
+        "groups": [
+          [
+            {
+              "topic": "Releases",
+              "count": 5
+            },
+            {
+              "topic": "Security",
+              "count": 4
+            },
+            {
+              "topic": "General",
+              "count": 3
+            },
+            {
+              "topic": "7-1",
+              "count": 1
+            },
+            {
+              "topic": "7.1",
+              "count": 1
+            },
+            {
+              "topic": "Community",
+              "count": 1
+            },
+            {
+              "topic": "Development",
+              "count": 1
+            },
+            {
+              "topic": "Education",
+              "count": 1
+            },
+            {
+              "topic": "Events",
+              "count": 1
+            },
+            {
+              "topic": "minor-releases",
+              "count": 1
+            },
+            {
+              "topic": "Open Website Alliance",
+              "count": 1
+            },
+            {
+              "topic": "owa",
+              "count": 1
+            },
+            {
+              "topic": "policy",
+              "count": 1
+            },
+            {
+              "topic": "WCUS",
+              "count": 1
+            },
+            {
+              "topic": "WordCamp",
+              "count": 1
+            }
+          ]
+        ],
+        "articleTopics": [
+          [
+            [
+              "Releases",
+              "Security"
+            ]
+          ],
+          [
+            [
+              "Releases",
+              "Security"
+            ]
+          ],
+          [
+            [
+              "General",
+              "Open Website Alliance",
+              "owa"
+            ]
+          ],
+          [
+            [
+              "Releases",
+              "Security"
+            ]
+          ],
+          [
+            [
+              "Education"
+            ]
+          ],
+          [
+            [
+              "General",
+              "policy"
+            ]
+          ],
+          [
+            [
+              "Community",
+              "Events",
+              "WCUS",
+              "WordCamp"
+            ]
+          ],
+          [
+            [
+              "Releases",
+              "7-1",
+              "7.1"
+            ]
+          ],
+          [
+            [
+              "General",
+              "Development"
+            ]
+          ],
+          [
+            [
+              "Releases",
+              "Security",
+              "minor-releases"
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "name": "folder with articles of its own",
+      "input": [
+        {
+          "url": "https://example.com/a/one.html",
+          "sourceUrl": "",
+          "categories": [],
+          "categorySchemes": []
+        },
+        {
+          "url": "https://example.com/a/two.html",
+          "sourceUrl": "",
+          "categories": [],
+          "categorySchemes": []
+        },
+        {
+          "url": "https://example.com/a/b/three.html",
+          "sourceUrl": "",
+          "categories": [],
+          "categorySchemes": []
+        },
+        {
+          "url": "https://example.com/a/b/four.html",
+          "sourceUrl": "",
+          "categories": [],
+          "categorySchemes": []
+        }
+      ],
+      "output": {
+        "sections": [
+          [],
+          [],
+          [
+            {
+              "label": "b",
+              "place": "example.com/a/b"
+            }
+          ],
+          [
+            {
+              "label": "b",
+              "place": "example.com/a/b"
+            }
+          ]
+        ],
+        "counts": [
+          {
+            "label": "b",
+            "place": "example.com/a/b",
+            "count": 2
+          }
+        ],
+        "groups": [],
+        "articleTopics": [
+          [],
+          [],
+          [],
+          []
+        ]
+      }
+    },
+    {
+      "name": "one article",
+      "input": [
+        {
+          "url": "https://example.com/news/world/story",
+          "sourceUrl": "",
+          "categories": [],
+          "categorySchemes": []
+        }
+      ],
+      "output": {
+        "sections": [
+          []
+        ],
+        "counts": [],
+        "groups": [],
+        "articleTopics": [
+          []
+        ]
+      }
+    },
+    {
+      "name": "unreadable addresses",
+      "input": [
+        {
+          "url": "",
+          "sourceUrl": "",
+          "categories": [],
+          "categorySchemes": []
+        },
+        {
+          "url": "not an address",
+          "sourceUrl": "",
+          "categories": [],
+          "categorySchemes": []
+        },
+        {
+          "url": "https://example.com/x/a",
+          "sourceUrl": "",
+          "categories": [],
+          "categorySchemes": []
+        },
+        {
+          "url": "https://example.com/x/b",
+          "sourceUrl": "",
+          "categories": [],
+          "categorySchemes": []
+        },
+        {
+          "url": "https://example.com/y/c",
+          "sourceUrl": "",
+          "categories": [],
+          "categorySchemes": []
+        },
+        {
+          "url": "https://example.com/y/d",
+          "sourceUrl": "",
+          "categories": [],
+          "categorySchemes": []
+        }
+      ],
+      "output": {
+        "sections": [
+          [],
+          [],
+          [
+            {
+              "label": "x",
+              "place": "example.com/x"
+            }
+          ],
+          [
+            {
+              "label": "x",
+              "place": "example.com/x"
+            }
+          ],
+          [
+            {
+              "label": "y",
+              "place": "example.com/y"
+            }
+          ],
+          [
+            {
+              "label": "y",
+              "place": "example.com/y"
+            }
+          ]
+        ],
+        "counts": [
+          {
+            "label": "x",
+            "place": "example.com/x",
+            "count": 2
+          },
+          {
+            "label": "y",
+            "place": "example.com/y",
+            "count": 2
+          }
+        ],
+        "groups": [],
+        "articleTopics": [
+          [],
+          [],
+          [],
+          [],
+          [],
+          []
+        ]
+      }
+    },
+    {
+      "name": "schemes",
+      "input": [
+        {
+          "url": "",
+          "sourceUrl": "",
+          "categories": [
+            "Rain",
+            "Snow",
+            "Paris",
+            "Only"
+          ],
+          "categorySchemes": [
+            "s:weather",
+            "s:weather",
+            "s:place",
+            "s:single"
+          ]
+        },
+        {
+          "url": "",
+          "sourceUrl": "",
+          "categories": [
+            "Rain",
+            "Lyon",
+            "Paris",
+            "Plain"
+          ],
+          "categorySchemes": [
+            "s:weather",
+            "s:place",
+            "s:weather",
+            ""
+          ]
+        },
+        {
+          "url": "",
+          "sourceUrl": "",
+          "categories": [
+            "Lyon",
+            "plain"
+          ],
+          "categorySchemes": [
+            "s:place",
+            ""
+          ]
+        },
+        {
+          "url": "",
+          "sourceUrl": "",
+          "categories": [
+            "Hail"
+          ],
+          "categorySchemes": []
+        }
+      ],
+      "output": {
+        "sections": [
+          [],
+          [],
+          [],
+          []
+        ],
+        "counts": [],
+        "groups": [
+          [
+            {
+              "topic": "plain",
+              "count": 2
+            },
+            {
+              "topic": "Hail",
+              "count": 1
+            },
+            {
+              "topic": "Only",
+              "count": 1
+            }
+          ],
+          [
+            {
+              "topic": "Lyon",
+              "count": 2
+            },
+            {
+              "topic": "Paris",
+              "count": 2
+            }
+          ],
+          [
+            {
+              "topic": "Rain",
+              "count": 2
+            },
+            {
+              "topic": "Snow",
+              "count": 1
+            }
+          ]
+        ],
+        "articleTopics": [
+          [
+            [
+              "Only"
+            ],
+            [
+              "Paris"
+            ],
+            [
+              "Rain",
+              "Snow"
+            ]
+          ],
+          [
+            [
+              "Plain"
+            ],
+            [
+              "Lyon",
+              "Paris"
+            ],
+            [
+              "Rain"
+            ]
+          ],
+          [
+            [
+              "plain"
+            ],
+            [
+              "Lyon"
+            ]
+          ],
+          [
+            [
+              "Hail"
+            ]
+          ]
+        ]
+      }
+    }
+  ],
+  "places": [
+    {
+      "input": {
+        "url": "https://WWW.Example.com/News/Sept/caf%C3%A9/2026/item",
+        "sourceUrl": ""
+      },
+      "output": "example.com/news/café"
+    },
+    {
+      "input": {
+        "url": "https://www.nytimes.com/2026/10/19/us/politics/story.html",
+        "sourceUrl": ""
+      },
+      "output": "nytimes.com/us/politics"
+    },
+    {
+      "input": {
+        "url": "https://example.com/",
+        "sourceUrl": ""
+      },
+      "output": "example.com"
+    },
+    {
+      "input": {
+        "url": "https://example.com/story",
+        "sourceUrl": ""
+      },
+      "output": "example.com"
+    },
+    {
+      "input": {
+        "url": "",
+        "sourceUrl": ""
+      },
+      "output": ""
+    },
+    {
+      "input": {
+        "url": "not an address",
+        "sourceUrl": ""
+      },
+      "output": ""
+    },
+    {
+      "input": {
+        "url": "https://sub.example.org/a/b/c/",
+        "sourceUrl": ""
+      },
+      "output": "sub.example.org/a/b"
+    },
+    {
+      "input": {
+        "url": "https://news.google.com/rss/articles/x",
+        "sourceUrl": "https://www.bbc.com/"
+      },
+      "output": "bbc.com"
+    }
+  ],
+  "hides": [
+    {
+      "input": {
+        "offTopics": [
+          "section:nytimes.com/us"
+        ],
+        "entry": {
+          "title": "t",
+          "summary": "s",
+          "url": "https://www.nytimes.com/2026/10/19/us/politics/story.html",
+          "sourceUrl": "",
+          "categories": [
+            "Elections",
+            "Vance"
+          ],
+          "categorySchemes": []
+        }
+      },
+      "output": true
+    },
+    {
+      "input": {
+        "offTopics": [
+          "section:nytimes.com/us/politics"
+        ],
+        "entry": {
+          "title": "t",
+          "summary": "s",
+          "url": "https://www.nytimes.com/2026/10/19/us/politics/story.html",
+          "sourceUrl": "",
+          "categories": [
+            "Elections",
+            "Vance"
+          ],
+          "categorySchemes": []
+        }
+      },
+      "output": true
+    },
+    {
+      "input": {
+        "offTopics": [
+          "section:nytimes.com/u"
+        ],
+        "entry": {
+          "title": "t",
+          "summary": "s",
+          "url": "https://www.nytimes.com/2026/10/19/us/politics/story.html",
+          "sourceUrl": "",
+          "categories": [
+            "Elections",
+            "Vance"
+          ],
+          "categorySchemes": []
+        }
+      },
+      "output": false
+    },
+    {
+      "input": {
+        "offTopics": [
+          "section:nytimes.com/world"
+        ],
+        "entry": {
+          "title": "t",
+          "summary": "s",
+          "url": "https://www.nytimes.com/2026/10/19/us/politics/story.html",
+          "sourceUrl": "",
+          "categories": [
+            "Elections",
+            "Vance"
+          ],
+          "categorySchemes": []
+        }
+      },
+      "output": false
+    },
+    {
+      "input": {
+        "offTopics": [
+          "section:nytimes.com"
+        ],
+        "entry": {
+          "title": "t",
+          "summary": "s",
+          "url": "https://www.nytimes.com/2026/10/19/us/politics/story.html",
+          "sourceUrl": "",
+          "categories": [
+            "Elections",
+            "Vance"
+          ],
+          "categorySchemes": []
+        }
+      },
+      "output": true
+    },
+    {
+      "input": {
+        "offTopics": [
+          "elections"
+        ],
+        "entry": {
+          "title": "t",
+          "summary": "s",
+          "url": "https://www.nytimes.com/2026/10/19/us/politics/story.html",
+          "sourceUrl": "",
+          "categories": [
+            "Elections",
+            "Vance"
+          ],
+          "categorySchemes": []
+        }
+      },
+      "output": false
+    },
+    {
+      "input": {
+        "offTopics": [
+          "elections",
+          "VANCE"
+        ],
+        "entry": {
+          "title": "t",
+          "summary": "s",
+          "url": "https://www.nytimes.com/2026/10/19/us/politics/story.html",
+          "sourceUrl": "",
+          "categories": [
+            "Elections",
+            "Vance"
+          ],
+          "categorySchemes": []
+        }
+      },
+      "output": true
+    },
+    {
+      "input": {
+        "offTopics": [
+          "section:nytimes.com/world",
+          "elections",
+          "vance"
+        ],
+        "entry": {
+          "title": "t",
+          "summary": "s",
+          "url": "https://www.nytimes.com/2026/10/19/us/politics/story.html",
+          "sourceUrl": "",
+          "categories": [
+            "Elections",
+            "Vance"
+          ],
+          "categorySchemes": []
+        }
+      },
+      "output": true
+    },
+    {
+      "input": {
+        "offTopics": [
+          "Section:nytimes.com/us"
+        ],
+        "entry": {
+          "title": "t",
+          "summary": "s",
+          "url": "https://www.nytimes.com/2026/10/19/us/politics/story.html",
+          "sourceUrl": "",
+          "categories": [
+            "Elections",
+            "Vance"
+          ],
+          "categorySchemes": []
+        }
+      },
+      "output": false
+    },
+    {
+      "input": {
+        "offTopics": [
+          "section:bbc.com"
+        ],
+        "entry": {
+          "title": "t",
+          "summary": "s",
+          "url": "https://news.google.com/rss/articles/x",
+          "sourceUrl": "https://www.bbc.com/",
+          "categories": [],
+          "categorySchemes": []
+        }
+      },
+      "output": true
+    },
+    {
+      "input": {
+        "offTopics": [
+          "section:news.google.com"
+        ],
+        "entry": {
+          "title": "t",
+          "summary": "s",
+          "url": "https://news.google.com/rss/articles/x",
+          "sourceUrl": "https://www.bbc.com/",
+          "categories": [],
+          "categorySchemes": []
+        }
+      },
+      "output": false
+    }
+  ],
+  "toggles": [
+    {
+      "input": {
+        "offTopics": [],
+        "place": "nytimes.com/us"
+      },
+      "output": {
+        "off": false,
+        "offTopics": [
+          "section:nytimes.com/us"
+        ]
+      }
+    },
+    {
+      "input": {
+        "offTopics": [
+          "Elections",
+          "section:nytimes.com/us/politics"
+        ],
+        "place": "nytimes.com/us"
+      },
+      "output": {
+        "off": false,
+        "offTopics": [
+          "Elections",
+          "section:nytimes.com/us"
+        ]
+      }
+    },
+    {
+      "input": {
+        "offTopics": [
+          "section:nytimes.com/us",
+          "section:nytimes.com/world"
+        ],
+        "place": "nytimes.com/us/politics"
+      },
+      "output": {
+        "off": true,
+        "offTopics": [
+          "section:nytimes.com/world"
+        ]
+      }
+    },
+    {
+      "input": {
+        "offTopics": [
+          "section:nytimes.com/us"
+        ],
+        "place": "nytimes.com/us"
+      },
+      "output": {
+        "off": true,
+        "offTopics": []
+      }
+    },
+    {
+      "input": {
+        "offTopics": [
+          "section:nytimes.com/us/politics"
+        ],
+        "place": "nytimes.com/us/politics"
+      },
+      "output": {
+        "off": true,
+        "offTopics": []
+      }
+    },
+    {
+      "input": {
+        "offTopics": [
+          "section:nytimes.com/usa"
+        ],
+        "place": "nytimes.com/us"
+      },
+      "output": {
+        "off": false,
+        "offTopics": [
+          "section:nytimes.com/usa",
+          "section:nytimes.com/us"
+        ]
+      }
+    }
+  ]
+}

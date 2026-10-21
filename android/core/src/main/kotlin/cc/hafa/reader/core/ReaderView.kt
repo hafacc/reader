@@ -160,6 +160,8 @@ data class ReaderView(
     val visible: List<Entry>,
     /** The topics in the current view, commonest first, kept as the same object while they stay the same. */
     val topicOrder: TopicOrder,
+    /** The current view's sections and topic groups, kept as the same object while its articles stay the same. */
+    val filters: ViewFilters,
     /** Name of the current view. */
     val viewTitle: ViewTitle,
     /** Feeds in the current view; empty means every feed. */
@@ -405,6 +407,86 @@ private fun topicOrderOf(entries: List<Entry>): TopicOrder {
     }
 }
 
+/** A view's sections and topic groups, as its filter rows show them. */
+class ViewFilters(
+    /** The view's sections with how many articles each covers, each followed by those under it. */
+    val sections: List<CountedSection>,
+    /** Each article's section chips by entry id, from its own feed's articles in the view. */
+    val articleSections: Map<String, List<SectionChip>>,
+    /** The view's topics in groups, the group covering most articles first. */
+    val groupOrder: GroupOrder,
+    /** Whether the view filters at all; Starred does not. */
+    val applies: Boolean = true,
+) {
+    /** An article's sections and topics as the filter rows show them; none where the view does not filter. */
+    fun of(entry: Entry): ArticleFilters =
+        if (applies) {
+            ArticleFilters(articleSections[entry.id] ?: emptyList(), groupOrder.articleRows(entry.categories))
+        } else {
+            ArticleFilters(emptyList(), emptyList())
+        }
+}
+
+/** An open article's filters: its section chips, then its topics in one row per group. */
+data class ArticleFilters(
+    /** Its sections, outermost first. */
+    val sections: List<SectionChip>,
+    /** Its topics, one row per group of the view. */
+    val topics: List<List<String>>,
+) {
+    /** Whether it has any chip. */
+    val isEmpty: Boolean get() = sections.isEmpty() && topics.isEmpty()
+
+    /** Whether any of its sections or topics is turned off in [settings]. */
+    fun anyOff(settings: ViewSettings): Boolean =
+        sections.any { section -> sectionOff(settings.offTopics, section.place) } ||
+            topics.any { row -> row.any { topic -> topicOff(settings, topic) } }
+}
+
+private val NO_FILTERS = ViewFilters(emptyList(), emptyMap(), GroupOrder(emptyList()), applies = false)
+
+/** The articles and filters of the last [filtersOf], reused while the articles' addresses and topics stay the same. */
+private class CountedFilters(val entries: List<Entry>, val filters: ViewFilters)
+
+@Volatile
+private var lastFilters: CountedFilters? = null
+
+private fun sameArticles(first: List<Entry>, second: List<Entry>): Boolean =
+    first.size == second.size &&
+        first.indices.all { index ->
+            val known = first[index]
+            val other = second[index]
+            known.id == other.id && known.categories == other.categories &&
+                known.url == other.url && known.sourceUrl == other.sourceUrl
+        }
+
+/** Each article's section chips, worked out per feed from all of that feed's articles given. */
+private fun sectionsByEntry(entries: List<Entry>): Map<String, List<SectionChip>> {
+    val chips = HashMap<String, List<SectionChip>>()
+    for (articles in entries.groupBy { entry -> entry.feedId }.values) {
+        for ((index, sections) in feedSections(articles).withIndex()) {
+            if (sections.isNotEmpty()) {
+                chips[articles[index].id] = sections
+            }
+        }
+    }
+    return chips
+}
+
+/** The sections and topic groups of a view's [entries]; none in Starred. */
+private fun filtersOf(selection: Selection, entries: List<Entry>): ViewFilters {
+    val cached = lastFilters
+    return if (selection == Selection.Starred) {
+        NO_FILTERS
+    } else if (cached != null && sameArticles(cached.entries, entries)) {
+        cached.filters
+    } else {
+        val byEntry = sectionsByEntry(entries)
+        ViewFilters(sectionCounts(byEntry.values), byEntry, GroupOrder(topicGroups(entries)))
+            .also { filters -> lastFilters = CountedFilters(entries, filters) }
+    }
+}
+
 /** Work out what the screens show from the reader's state. */
 fun deriveView(state: ReaderState): ReaderView {
     val selection = state.selection
@@ -449,6 +531,7 @@ fun deriveView(state: ReaderState): ReaderView {
         baseEntries = baseEntries,
         visible = visible,
         topicOrder = topicOrderOf(baseEntries),
+        filters = filtersOf(selection, baseEntries),
         viewTitle = viewTitle,
         viewFeedIds = viewFeedIds,
         current = state.entries.firstOrNull { entry -> entry.id == state.currentId },

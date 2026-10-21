@@ -100,12 +100,20 @@ All paths are Firestore. `{uid}` is the Firebase Auth id.
   account with the next change the person makes.
 - `users/{uid}/entries/{entryId}`: one per article the user has received.
   Fields: `feedId`, `guid`, `title`, `published`, `dated`, `url`, `author`,
-  `imageUrl`, `excerpt`, `summary`, `categories`, `bodyHash`, `read`, `starred`,
+  `imageUrl`, `excerpt`, `summary`, `categories`, `categorySchemes` (the
+  scheme of each category at the same index, empty for none), `sourceUrl`
+  (RSS `<source url>`, empty for none), `bodyHash`, `read`, `starred`,
   `addedAt`, `updatedAt`, and `expireAt` only under a finite retention and
-  when not starred.
+  when not starred. Older clients write neither `categorySchemes` nor
+  `sourceUrl` (the rules allow them, not require them) and read without them
+  as empty; an entry an older client writes whole loses them, and its
+  section then comes from its link.
   `entryId` = sha256(`feedId` + `guid`), so two devices adding the same article
   write the same document.
-- `users/{uid}/settings/{viewKey}`: one view's sort, words and topics, with
+- `users/{uid}/settings/{viewKey}`: one view's sort, words, topics and
+  sections (turned-off sections ride in `offTopics` as `section:{place}`, so
+  older clients, which add and remove only topics by name and hide an article
+  only when all its topics are off, keep them and are not affected), with
   `updatedAt` and a `deleted` tombstone flag; the id is the URL-encoded view key
   (`all`, `starred`, `folder:{name}`, `feed:{id}`), which the document also
   holds as `key`.
@@ -296,7 +304,7 @@ decides). Web with the extension closed gets nothing until a device opens.
   settings, the same panel everywhere, stored in the local database (`settings`
   store) and synced like entries. The panel opens where the article does,
   and as a full page on a phone. It holds sort (Newest or Oldest), words and
-  topics (Starred has only the sort); the unread-only switch is in the list's
+  filters (Starred has only the sort); the unread-only switch is in the list's
   bar, not here. A feed's panel also has its group and Unsubscribe. The panel
   also holds the reading font, which is one choice for the whole app (see below).
 - **Words and topics** (`shared/src/filter.ts`): type a word or phrase and press
@@ -306,16 +314,58 @@ decides). Web with the extension closed gets nothing until a device opens.
   whitespace matches any whitespace, a word boundary is required at an end only
   when that end is a word character, and each list is compiled once. Every topic
   the feed supplies starts on; tap one to turn it off, and an article whose
-  topics are all off is hidden. Every list of topics or words (the panel's
-  words and topics, and an article's topics, on Starred too) is ordered by how
-  many of the view's articles carry or match each (most first, then by name; an
-  article lists each of its topics once), wrapping into up to three rows; when
-  they need more, they go in three rows that scroll sideways together, each
-  chip in turn at the end of the row that is shortest so far (the upper on a
-  tie), so the rows are packed with no columns. Chips never move when toggled. On a phone each topic chip, and
+  topics are all off is hidden. The panel's words, and the topics on each
+  article's card in the list, are ordered by how many of the view's articles
+  carry or match each (most first, then by name; an article lists each of its
+  topics once), wrapping into up to three rows; when they need more, they go
+  in three rows that scroll sideways together, each chip in turn at the end of
+  the row that is shortest so far (the upper on a tie), so the rows are packed
+  with no columns. Chips never move when toggled. On a phone each chip, and
   each word's remove button, takes taps 44 pixels tall (48 dp on Android)
-  around its smaller outline; both lists use the same chip. A feed's own
-  settings also apply in every group and view it appears in.
+  around its smaller outline. A feed's own settings also apply in every group
+  and view it appears in.
+- **Filters** (`shared/src/sections.ts`, `topicGroups` in `shared/src/filter.ts`,
+  checked by `shared/fixtures/filters.json`): the panel's "Filters" area, and
+  an open article's filter button, show rows of chips: the sections first
+  (each led by a link icon), then one row per group of topics; each row is a
+  single line that scrolls sideways, its ends fading where more chips lie. The
+  panel's rows cover the view's articles with counts; an article's cover only
+  it, without counts.
+  - *Topic groups:* categories are grouped by RSS `<category domain>` / Atom
+    `<category scheme>`; no scheme (and JSON Feed tags) is the plain group, as
+    is a scheme the view's articles use for only one distinct topic. A topic
+    under two schemes appears once, in the group covering more articles (then
+    the later scheme in code-unit order). Groups are unnamed and ordered by how
+    many articles they cover (then by scheme); chips by count, then name. Every
+    topic is kept, one on a single article too.
+  - *Name order:* wherever topics or sections go by name, they follow
+    `compareNames` (`shared/src/names.ts`, ported to Kotlin): accents and
+    capitals ignored, then capitals ignored, then as written, each in UTF-16
+    code-unit order, so every platform orders them alike (a locale's collation
+    orders punctuation such as `7-1` and `7.1` differently from one engine to
+    the next).
+  - *Sections:* an article's address is its `<source url>` when the feed gives
+    one, else its link; its site is the host without a leading `www.`. Worked
+    out when shown, per feed from the feed's stored articles in the view: when
+    they span more than one site, each article's only section is its site.
+    Otherwise sections come from the path: the last part, parts with a digit
+    and English month names and abbreviations are dropped (parts are
+    lower-cased and percent-decoded first); a part counts only when two of the
+    feed's articles have it at that place under the same parents; leading
+    parts every article shares are skipped; each level that splits the
+    articles gives a chip (`us`, `us/politics`). In the panel a section is
+    followed by those under it. Turning one off stores its full place
+    (`nytimes.com/us/politics`) in `offTopics` as `section:{place}`, and hides
+    every article whose own place (site, then all its kept path parts) is that
+    place or lies under it. Turning a section off clears stored sections under
+    it; tapping an off section whose parent is off turns the parent back on.
+  - *Article filters:* the article's bar has a filter button (hidden when the
+    article has no chips, and in Starred), with an accent dot while any of its
+    chips is off. On a phone it opens a sheet over the dimmed article (a
+    handle, the filter icon and "Filters", then the rows), closed by dragging
+    it down, tapping outside it, Escape or (Android) Back; on a wide screen a
+    box below the button, closed by clicking outside it or Escape. Toggling
+    there holds the list as toggling a topic from an article does.
 - **Managing feeds and groups:** a feed's panel has its name (rename), a group
   field (type a name, with the existing groups suggested; empty for no group) and
   Unsubscribe; a group's
@@ -496,7 +546,7 @@ decides). Web with the extension closed gets nothing until a device opens.
   are checked, still when the system or browser turns motion off; the view's name,
   cut short with an ellipsis when long; and a small chevron), unread only, view settings
   and mark all as read (dimmed and off, for screen readers too, while the view has
-  nothing unread, empty or not; `Shift A` then does nothing); the article has Back, star,
+  nothing unread, empty or not; `Shift A` then does nothing); the article has Back, filters (when it has any), star,
   read, share and open the original, which on a phone appear only there; view settings,
   add feed and sync have Back and the screen's name. On Android the bars slide away while
   scrolling down and come back on the way up, on every new screen or article, and
