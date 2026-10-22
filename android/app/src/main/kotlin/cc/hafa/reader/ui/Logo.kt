@@ -36,6 +36,10 @@ private const val DOT_RADIUS = 6f
 private const val SPACING = 13.2f
 private const val FIRST_RADIUS = 16.8f
 private const val STROKE = 8.1f
+private const val LAST_RADIUS = FIRST_RADIUS + SPACING
+
+// outer edge of the still logo's last arc, which no wave crosses
+private const val EDGE = LAST_RADIUS + STROKE / 2
 private const val STEP_SECONDS = 0.7
 private const val NANOS_PER_SECOND = 1e9
 private val SLOTS = listOf(-1, 0, 1, 2)
@@ -57,10 +61,15 @@ private fun wavesAt(phase: Double): List<Wave> {
     val whole = floor(phase).toInt()
     val fraction = (phase - whole).toFloat()
     return SLOTS.map { slot ->
-        val radius = FIRST_RADIUS + SPACING * (slot + fraction)
-        val grow = smooth((radius - (FIRST_RADIUS - SPACING)) / SPACING)
-        val shrink = smooth(1 - (radius - (FIRST_RADIUS + SPACING)) / SPACING)
-        Wave(radius, STROKE * minOf(grow, shrink), if ((slot - whole) % 2 == 0) WHITE else BLUE)
+        val travel = FIRST_RADIUS + SPACING * (slot + fraction)
+        val color = if ((slot - whole) % 2 == 0) WHITE else BLUE
+        if (travel <= LAST_RADIUS) {
+            Wave(travel, STROKE * smooth((travel - (FIRST_RADIUS - SPACING)) / SPACING), color)
+        } else {
+            // past the last arc it holds its outer edge and thins inward
+            val width = STROKE * (1 - smooth((travel - LAST_RADIUS) / SPACING))
+            Wave(EDGE - width / 2, width, color)
+        }
     }
 }
 
