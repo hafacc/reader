@@ -16,6 +16,9 @@
   const SPACING = 13.2;
   const FIRST_RADIUS = 16.8;
   const STROKE = 8.1;
+  const LAST_RADIUS = FIRST_RADIUS + SPACING;
+  // outer edge of the still logo's last arc, which no wave crosses
+  const EDGE = LAST_RADIUS + STROKE / 2;
   const STEP_SECONDS = 0.7;
   const SLOTS = [-1, 0, 1, 2];
   const WHITE = "#fff";
@@ -33,15 +36,16 @@
     const whole = Math.floor(phase);
     const fraction = phase - whole;
     return SLOTS.map((slot) => {
-      const radius = FIRST_RADIUS + SPACING * (slot + fraction);
-      const grow = smooth((radius - (FIRST_RADIUS - SPACING)) / SPACING);
-      const shrink = smooth(1 - (radius - (FIRST_RADIUS + SPACING)) / SPACING);
-      return {
-        slot,
-        radius,
-        width: STROKE * Math.min(grow, shrink),
-        color: (slot - whole) % 2 === 0 ? WHITE : BLUE,
-      };
+      const travel = FIRST_RADIUS + SPACING * (slot + fraction);
+      const color = (slot - whole) % 2 === 0 ? WHITE : BLUE;
+      if (travel <= LAST_RADIUS) {
+        const grow = smooth((travel - (FIRST_RADIUS - SPACING)) / SPACING);
+        return { slot, radius: travel, width: STROKE * grow, color };
+      } else {
+        // past the last arc it holds its outer edge and thins inward
+        const width = STROKE * (1 - smooth((travel - LAST_RADIUS) / SPACING));
+        return { slot, radius: EDGE - width / 2, width, color };
+      }
     });
   });
 
