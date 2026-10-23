@@ -411,22 +411,25 @@
       {/each}
       {#if showsListEnd(rows.length, reader.visible.length)}
         <!-- on a phone, pulling up past the end refreshes instead; the button stays there only for screen readers and the keyboard -->
+        <!-- sr-only and not-sr-only set width and padding, so they go on a wrapper rather than the button -->
         <footer class="md:pb-10">
-          <button
-            type="button"
-            class="sr-only flex min-h-14 w-full items-center justify-center gap-2 border-b border-line bg-page px-4 text-sm text-ink hover:bg-side focus-visible:not-sr-only disabled:text-muted disabled:hover:bg-transparent md:not-sr-only"
-            disabled={reader.refreshing}
-            aria-busy={reader.refreshing}
-            onclick={() => logFailure(reader.refreshView())}
-          >
-            <RefreshCw
-              class="size-4 {reader.refreshing
-                ? "motion-safe:animate-spin"
-                : ""}"
-              aria-hidden="true"
-            />
-            {copy.refreshButton}
-          </button>
+          <div class="sr-only focus-within:not-sr-only md:not-sr-only">
+            <button
+              type="button"
+              class="flex min-h-14 w-full items-center justify-center gap-2 border-b border-line bg-page px-4 text-sm text-ink hover:bg-side disabled:text-muted disabled:hover:bg-transparent"
+              disabled={reader.refreshing}
+              aria-busy={reader.refreshing}
+              onclick={() => logFailure(reader.refreshView())}
+            >
+              <RefreshCw
+                class="size-4 {reader.refreshing
+                  ? "motion-safe:animate-spin"
+                  : ""}"
+                aria-hidden="true"
+              />
+              {copy.refreshButton}
+            </button>
+          </div>
         </footer>
       {/if}
     </div>
