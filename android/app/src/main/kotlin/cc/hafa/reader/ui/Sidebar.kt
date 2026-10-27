@@ -32,7 +32,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
@@ -46,7 +45,6 @@ import cc.hafa.reader.R
 import cc.hafa.reader.core.Selection
 import cc.hafa.reader.core.sidebarRows
 import cc.hafa.reader.core.viewKey
-import cc.hafa.reader.sync.SyncConfig
 
 private val PINNED_FOOTER_HEIGHT = 536.dp
 
@@ -57,7 +55,6 @@ fun Sidebar(snapshot: Snapshot, viewModel: ReaderViewModel, onPicked: () -> Unit
     val colors = ReaderTheme.colors
     val selectedKey = viewKey(state.selection)
     val sync by viewModel.syncUi.collectAsStateWithLifecycle()
-    val links = LocalUriHandler.current
     val footer: @Composable () -> Unit = {
         HorizontalDivider(Modifier.padding(horizontal = 28.dp, vertical = 8.dp), color = colors.line)
         SidebarItem(
@@ -65,7 +62,10 @@ fun Sidebar(snapshot: Snapshot, viewModel: ReaderViewModel, onPicked: () -> Unit
             count = 0,
             selected = false,
             icon = { tint -> Icon(Icons.Outlined.MailOutline, null, tint = tint) },
-            onClick = { links.openUri(SyncConfig.CONTACT_URL) },
+            onClick = {
+                viewModel.showContact()
+                onPicked()
+            },
         )
         SidebarItem(
             label = syncStatusText(sync.report.status),

@@ -75,6 +75,9 @@ enum class Detail {
 
     /** Sign-in and sync. */
     Account,
+
+    /** How to reach support. */
+    Contact,
 }
 
 /** A short message for the snackbar. */
@@ -234,7 +237,7 @@ class ReaderViewModel(application: Application) : AndroidViewModel(application) 
     /** Go to the article list. */
     fun showList() {
         screen = Screen.List
-        if (detail == Detail.Add || detail == Detail.Account) {
+        if (detail == Detail.Add || detail == Detail.Account || detail == Detail.Contact) {
             detail = Detail.Article
         }
     }
@@ -273,6 +276,13 @@ class ReaderViewModel(application: Application) : AndroidViewModel(application) 
     fun showAccount() {
         closeArticle()
         detail = Detail.Account
+        screen = Screen.Detail
+    }
+
+    /** Show how to reach support. */
+    fun showContact() {
+        closeArticle()
+        detail = Detail.Contact
         screen = Screen.Detail
     }
 
