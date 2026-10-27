@@ -41,7 +41,7 @@ import java.text.NumberFormat
 
 /**
  * The phone layout: the article list, with the feed list in a drawer opened
- * from its bottom bar, and the article, view settings, add-feed or account screen over it.
+ * from its bottom bar, and the article, view settings, add-feed, account or contact screen over it.
  * System Back closes the drawer, then leaves the detail screen for the list,
  * then leaves the app.
  */
@@ -177,6 +177,7 @@ private fun ScreenContent(snapshot: Snapshot, viewModel: ReaderViewModel, listSt
                     Detail.Settings -> SettingsScreen(snapshot, viewModel)
                     Detail.Add -> AddFeedScreen(snapshot, viewModel)
                     Detail.Account -> AccountScreen(viewModel)
+                    Detail.Contact -> ContactScreen(viewModel)
                 }
             }
         }

@@ -15,7 +15,7 @@
   import ShortcutsPane from "#lib/components/shortcuts-pane.svelte";
   import Sidebar from "#lib/components/sidebar.svelte";
   import SyncStatus from "#lib/components/sync-status.svelte";
-  import { playStoreUrl } from "#lib/config.ts";
+  import { contactUrl, playStoreUrl } from "#lib/config.ts";
   import { copy } from "#lib/copy.ts";
   import { firstRun } from "#lib/first-run.ts";
   import { isEdgeSwipe, type Point } from "#lib/gestures.ts";
@@ -475,6 +475,11 @@
                   </button>
                 </div>
               {/if}
+              <a
+                class="mb-6 text-sm text-muted underline hover:text-ink"
+                href={contactUrl}
+                >{copy.contactUs}</a
+              >
             </div>
           {/if}
         </div>
