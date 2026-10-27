@@ -248,7 +248,7 @@ fun AccountScreen(viewModel: ReaderViewModel) {
                     ErrorNote(stringResource(R.string.sync_sign_in_failed))
                 }
             }
-            Policies()
+            Policies(viewModel::showContact)
         }
     }
 }
@@ -288,13 +288,17 @@ private fun Note(text: AnnotatedString) {
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun Policies() {
+private fun Policies(onContact: () -> Unit) {
     val links = LocalUriHandler.current
     val colors = ReaderTheme.colors
     FlowRow(Modifier.fillMaxWidth().padding(top = 12.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        val pages = listOf(R.string.privacy to SyncConfig.PRIVACY_URL, R.string.terms to SyncConfig.TERMS_URL, R.string.contact to SyncConfig.CONTACT_URL)
-        for ((label, address) in pages) {
-            TextButton(onClick = { links.openUri(address) }, colors = ButtonDefaults.textButtonColors(contentColor = colors.muted)) {
+        val pages = listOf(
+            R.string.privacy to { links.openUri(SyncConfig.PRIVACY_URL) },
+            R.string.terms to { links.openUri(SyncConfig.TERMS_URL) },
+            R.string.contact to onContact,
+        )
+        for ((label, open) in pages) {
+            TextButton(onClick = open, colors = ButtonDefaults.textButtonColors(contentColor = colors.muted)) {
                 Text(stringResource(label), textDecoration = TextDecoration.Underline)
             }
         }

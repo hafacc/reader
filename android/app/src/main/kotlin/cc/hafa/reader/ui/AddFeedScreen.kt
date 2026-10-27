@@ -30,6 +30,8 @@ import androidx.compose.material3.ListItem
 import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -63,6 +65,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.compose.ui.text.style.TextDecoration
 import cc.hafa.reader.R
 import cc.hafa.reader.core.FeedHit
 import cc.hafa.reader.core.FeedProblem
@@ -126,7 +129,7 @@ fun AddFeedScreen(snapshot: Snapshot, viewModel: ReaderViewModel) {
     }
 }
 
-/** The screen shown before any feed is followed, with the menu button that opens the drawer (and sign-in) in its bottom bar. */
+/** The screen shown before any feed is followed, with the menu button that opens the drawer (and sign-in) in its bottom bar, and a link to the contact screen. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun FirstFeedScreen(snapshot: Snapshot, viewModel: ReaderViewModel, onMenu: () -> Unit) {
@@ -154,6 +157,13 @@ fun FirstFeedScreen(snapshot: Snapshot, viewModel: ReaderViewModel, onMenu: () -
                 }
             } else {
                 AddFeedForm(snapshot, viewModel, first = true, offerSignIn = !sync.signedIn)
+                TextButton(
+                    onClick = viewModel::showContact,
+                    modifier = Modifier.align(Alignment.CenterHorizontally).padding(top = 12.dp),
+                    colors = ButtonDefaults.textButtonColors(contentColor = ReaderTheme.colors.muted),
+                ) {
+                    Text(stringResource(R.string.contact_us), textDecoration = TextDecoration.Underline)
+                }
             }
         }
     }
