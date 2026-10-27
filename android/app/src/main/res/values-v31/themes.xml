@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="Theme.Reader" parent="Base.Theme.Reader">
+        <item name="android:windowSplashScreenAnimatedIcon">@drawable/splash_logo</item>
+        <item name="android:windowSplashScreenAnimationDuration">1400</item>
+        <item name="android:windowSplashScreenIconBackgroundColor">@color/logo_navy</item>
+    </style>
+</resources>
