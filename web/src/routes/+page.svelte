@@ -457,24 +457,27 @@
             </p>
           {:else}
             <div class="flex w-full max-w-md flex-col items-center">
-              <AddFeed {reader} first ondone={finishAdding} />
-              {#if !reader.sync.signedIn}
-                <div
-                  class="flex w-full flex-col gap-2 border-t border-line px-6 pt-5 pb-6 text-sm"
-                >
-                  <p class="text-muted">{copy.firstRunSignInLine}</p>
-                  <button
-                    type="button"
-                    class="flex min-h-11 items-center justify-center gap-2 rounded-lg border border-line px-3 py-2 hover:bg-side"
-                    onpointerenter={preloadSignIn}
-                    onfocus={preloadSignIn}
-                    onclick={() => logFailure(signInFromEmpty())}
-                  >
-                    <LogIn class="size-4" aria-hidden="true" />
-                    {copy.firstRunSignIn}
-                  </button>
-                </div>
-              {/if}
+              <AddFeed {reader} first ondone={finishAdding}>
+                {#snippet signIn()}
+                  {#if !reader.sync.signedIn}
+                    <div
+                      class="flex flex-col gap-3 rounded-xl bg-accent-soft p-4"
+                    >
+                      <p class="font-semibold">{copy.firstRunSignInLine}</p>
+                      <button
+                        type="button"
+                        class="flex min-h-11 items-center justify-center gap-2 rounded-lg border border-accent bg-page px-3 py-2 text-sm font-semibold text-accent hover:bg-side"
+                        onpointerenter={preloadSignIn}
+                        onfocus={preloadSignIn}
+                        onclick={() => logFailure(signInFromEmpty())}
+                      >
+                        <LogIn class="size-4" aria-hidden="true" />
+                        {copy.firstRunSignIn}
+                      </button>
+                    </div>
+                  {/if}
+                {/snippet}
+              </AddFeed>
               <a
                 class="mb-6 text-sm text-muted underline hover:text-ink"
                 href={contactUrl}

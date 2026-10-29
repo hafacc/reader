@@ -3,6 +3,7 @@
   import Download from "@lucide/svelte/icons/download";
   import Search from "@lucide/svelte/icons/search";
   import Upload from "@lucide/svelte/icons/upload";
+  import type { Snippet } from "svelte";
   import { copy } from "#lib/copy.ts";
   import { buildOpml } from "#lib/opml.ts";
   import { type FeedHit, faviconFor, type Reader } from "#lib/reader.svelte.ts";
@@ -13,7 +14,13 @@
     reader,
     first,
     ondone,
-  }: { reader: Reader; first: boolean; ondone: () => void } = $props();
+    signIn,
+  }: {
+    reader: Reader;
+    first: boolean;
+    ondone: () => void;
+    signIn?: Snippet;
+  } = $props();
 
   const SCHEME_PATTERN = /^[a-z][a-z0-9+.-]*:\/\//iu;
   const SPACE_PATTERN = /\s/u;
@@ -200,6 +207,7 @@
       <p class="text-sm text-muted">{copy.emptyBody}</p>
     </div>
   {/if}
+  {@render signIn?.()}
 
   <form class="flex flex-col gap-3" onsubmit={submit}>
     <label class="flex flex-col gap-1.5 text-sm" for="feed-query">
