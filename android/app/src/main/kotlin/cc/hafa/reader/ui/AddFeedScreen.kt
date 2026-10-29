@@ -2,11 +2,13 @@ package cc.hafa.reader.ui
 
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
@@ -28,6 +30,7 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.ListItemDefaults
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -172,7 +175,7 @@ fun FirstFeedScreen(snapshot: Snapshot, viewModel: ReaderViewModel, onMenu: () -
 /**
  * Subscribe by address (finding the feed a page offers), or import an OPML
  * file; with [offerSignIn], signing in to bring an account's feeds is offered
- * under the address field.
+ * above the address field.
  */
 @Composable
 private fun AddFeedForm(snapshot: Snapshot, viewModel: ReaderViewModel, first: Boolean, offerSignIn: Boolean = false) {
@@ -274,6 +277,9 @@ private fun AddFeedForm(snapshot: Snapshot, viewModel: ReaderViewModel, first: B
                 Text(stringResource(R.string.empty_body), fontSize = 14.sp, lineHeight = 20.sp, color = colors.muted)
             }
         }
+        if (offerSignIn) {
+            SignInPrompt(viewModel::syncClicked)
+        }
         Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
             val problem = (fieldMessage as? FieldMessage.Problem)?.problem
             val supporting = when (val current = fieldMessage) {
@@ -328,9 +334,6 @@ private fun AddFeedForm(snapshot: Snapshot, viewModel: ReaderViewModel, first: B
                     fontWeight = FontWeight.SemiBold,
                 )
             }
-        }
-        if (offerSignIn) {
-            SignInPrompt(viewModel::syncClicked)
         }
         if (hits.isNotEmpty()) {
             val shape = RoundedCornerShape(8.dp)
@@ -391,18 +394,28 @@ private fun AddFeedForm(snapshot: Snapshot, viewModel: ReaderViewModel, first: B
 /** For someone who already uses the reader elsewhere: signing in brings their feeds. */
 @Composable
 private fun SignInPrompt(onSignIn: () -> Unit) {
-    Row(
-        Modifier.fillMaxWidth(),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
+    val colors = ReaderTheme.colors
+    Column(
+        Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(12.dp))
+            .background(colors.accentSoft)
+            .padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        Text(stringResource(R.string.first_sign_in_line), modifier = Modifier.weight(1f), fontSize = 14.sp, lineHeight = 20.sp, color = ReaderTheme.colors.muted)
-        OutlineButton(
-            stringResource(R.string.first_sign_in),
+        Text(stringResource(R.string.first_sign_in_line), fontWeight = FontWeight.SemiBold, fontSize = 16.sp, lineHeight = 24.sp, color = colors.text)
+        OutlinedButton(
             onClick = onSignIn,
-            modifier = Modifier.heightIn(min = 48.dp),
-            icon = Icons.AutoMirrored.Outlined.Login,
-        )
+            modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp),
+            shape = RoundedCornerShape(8.dp),
+            border = BorderStroke(1.dp, colors.accent),
+            colors = ButtonDefaults.outlinedButtonColors(containerColor = colors.page, contentColor = colors.accent),
+            contentPadding = ButtonDefaults.ButtonWithIconContentPadding,
+        ) {
+            Icon(Icons.AutoMirrored.Outlined.Login, null, modifier = Modifier.size(ButtonDefaults.IconSize))
+            Spacer(Modifier.width(ButtonDefaults.IconSpacing))
+            Text(stringResource(R.string.first_sign_in), fontWeight = FontWeight.SemiBold)
+        }
     }
 }
 
