@@ -30,6 +30,7 @@ class ReaderModelTest {
     private val store = MemoryStore()
     private val preferences = MemoryPreferences()
     private val fetcher = FakeFetcher()
+    private val taggedId = feedId("https://t.example/feed")
     private var now = 1_800_000_000_000L
     private var saving = false
 
@@ -440,7 +441,7 @@ class ReaderModelTest {
         model.syncHost.apply(
             RemoteChange(
                 entries = listOf(article("later", feed.id, now)),
-                settings = mapOf("all" to SavedSettings(DEFAULT_SETTINGS.copy(hideWords = listOf("one")), now)),
+                settings = mapOf("feed:${feed.id}" to SavedSettings(DEFAULT_SETTINGS.copy(hideWords = listOf("one")), now)),
             ),
         )
         assertEquals(listOf("one"), model.titles())
@@ -593,7 +594,7 @@ class ReaderModelTest {
         val model = model()
         model.addWithItems("https://a.example/feed", "one", "two")
         model.markAllRead()
-        model.toggleTopic("x", fromArticle = true)
+        model.toggleTopic(listOf(feedId("https://a.example/feed")), "x", fromArticle = true)
         assertEquals(2, model.titles().size)
         val gate = CompletableDeferred<Unit>()
         fetcher.gate = gate
@@ -1079,12 +1080,13 @@ class ReaderModelTest {
         val politics = view.baseEntries.first { entry -> entry.title == "us/politics/a" }
         val filters = view.filters.of(politics)
         assertEquals(listOf("s.example/us", "s.example/us/politics"), filters.sections.map { section -> section.place })
-        model.toggleSection("s.example/us", fromArticle = false)
-        assertEquals(listOf("section:s.example/us"), model.view().viewSettings.offTopics)
-        assertTrue(filters.anyOff(model.view().viewSettings))
+        val id = feedId("https://s.example/feed")
+        model.toggleSection(listOf(id), "s.example/us", fromArticle = false)
+        assertEquals(listOf("section:s.example/us"), feedSettings(model.state.value.settings, id).offTopics)
+        assertTrue(filters.anyOff(model.state.value.settings))
         assertEquals(listOf("world/d", "world/e"), model.titles().sorted())
-        model.toggleSection("s.example/us/politics", fromArticle = false)
-        assertEquals(emptyList(), model.view().viewSettings.offTopics)
+        model.toggleSection(listOf(id), "s.example/us/politics", fromArticle = false)
+        assertEquals(emptyList(), feedSettings(model.state.value.settings, id).offTopics)
         model.select(Selection.Starred)
         assertTrue(model.view().filters.of(politics).isEmpty)
     }
@@ -1093,15 +1095,16 @@ class ReaderModelTest {
     fun `a topic turned off from an article is held until the list is refreshed`() = runTest {
         val model = model()
         model.addTagged()
-        model.toggleTopic("politics", fromArticle = true)
-        // The chips show the change at once, from the view's settings, while the list holds its rows.
-        assertTrue(topicOff(model.view().viewSettings, "Politics"))
-        assertFalse(topicOff(model.view().viewSettings, "Sports"))
+        model.toggleTopic(listOf(taggedId), "politics", fromArticle = true)
+        // The chips show the change at once, from the feed's settings, while the list holds its rows.
+        assertTrue(topicOff(feedSettings(model.state.value.settings, taggedId), "Politics"))
+        assertFalse(topicOff(feedSettings(model.state.value.settings, taggedId), "Sports"))
         assertEquals(2, model.titles().size)
-        model.toggleTopic("Sports", fromArticle = true)
-        assertTrue(topicOff(model.view().viewSettings, "Sports"))
+        model.toggleTopic(listOf(taggedId), "Sports", fromArticle = true)
+        assertTrue(topicOff(feedSettings(model.state.value.settings, taggedId), "Sports"))
         assertEquals(2, model.titles().size)
-        assertEquals(mapOf("all" to emptyList<String>()), model.state.value.heldTopics)
+        assertEquals(mapOf("feed:$taggedId" to emptyList<String>()), model.state.value.heldTopics)
+        assertEquals(null, model.state.value.settings["all"])
         fetcher.answers["https://t.example/feed"] = FetchOutcome(status = 304)
         model.refresh()
         assertEquals(emptyList(), model.titles())
@@ -1111,14 +1114,14 @@ class ReaderModelTest {
     fun `held topics end with a view change, the unread switch or a toggle from settings`() = runTest {
         val model = model()
         model.addTagged()
-        model.toggleTopic("Politics", fromArticle = true)
+        model.toggleTopic(listOf(taggedId), "Politics", fromArticle = true)
         model.setUnreadOnly(true)
         assertEquals(listOf("sports story"), model.titles())
-        model.toggleTopic("Politics", fromArticle = true)
+        model.toggleTopic(listOf(taggedId), "Politics", fromArticle = true)
         assertEquals(listOf("sports story"), model.titles())
-        model.toggleTopic("Sports", fromArticle = false)
+        model.toggleTopic(listOf(taggedId), "Sports", fromArticle = false)
         assertEquals(listOf("politics story"), model.titles())
-        model.toggleTopic("Sports", fromArticle = true)
+        model.toggleTopic(listOf(taggedId), "Sports", fromArticle = true)
         model.select(Selection.Starred)
         model.select(Selection.All)
         assertEquals(2, model.titles().size)
@@ -1131,9 +1134,60 @@ class ReaderModelTest {
         model.addTagged()
         val id = feedId("https://t.example/feed")
         model.select(Selection.FeedView(id))
-        model.toggleTopic("Sports", fromArticle = false)
+        model.toggleTopic(listOf(id), "Sports", fromArticle = false)
         model.select(Selection.All)
         assertEquals(listOf("politics story"), model.titles())
+    }
+
+    @Test
+    fun `a group's settings show its feeds' words and topics, mixed where they differ`() = runTest {
+        val model = model()
+        model.addWithItems("https://a.example/feed", "crypto one")
+        model.addWithItems("https://b.example/feed", "crypto two")
+        val aId = feedId("https://a.example/feed")
+        val bId = feedId("https://b.example/feed")
+        model.setFolder(aId, "News")
+        model.setFolder(bId, "News")
+        model.select(Selection.FeedView(aId))
+        model.changeSettings { settings -> settings.copy(hideWords = listOf("crypto")) }
+        model.select(Selection.Folder("News"))
+        assertEquals(listOf("crypto"), model.view().hideWords)
+        assertTrue(wordMixed(model.state.value.settings, model.view().filterFeedIds, WordList.Hide, "crypto"))
+        assertEquals(listOf("crypto two"), model.titles())
+        model.addWord(WordList.Hide, "Crypto")
+        assertFalse(wordMixed(model.state.value.settings, model.view().filterFeedIds, WordList.Hide, "crypto"))
+        assertEquals(listOf("Crypto"), feedSettings(model.state.value.settings, bId).hideWords)
+        model.removeWord(WordList.Hide, "crypto")
+        assertEquals(emptyList(), model.view().hideWords)
+        assertEquals(null, model.state.value.settings["folder:News"])
+    }
+
+    @Test
+    fun `a topic toggled from a group turns off in every feed that has it, then back on`() = runTest {
+        val model = model()
+        model.addTagged()
+        val ids = listOf(taggedId, "other")
+        val settings = mapOf("feed:$taggedId" to ViewSettings(offTopics = listOf("politics")))
+        assertEquals(FilterState.Mixed, topicState(settings, ids, "Politics"))
+        model.toggleTopic(listOf(taggedId), "Sports", fromArticle = false)
+        assertEquals(FilterState.Off, topicState(model.state.value.settings, listOf(taggedId), "sports"))
+        assertEquals(listOf(taggedId), model.view().filters.feedsWithTopic("SPORTS"))
+    }
+
+    @Test
+    fun `words and filters a group or All items had are deleted, and the sort kept`() = runTest {
+        val model = model()
+        model.load()
+        model.syncHost.apply(
+            RemoteChange(
+                settings = mapOf(
+                    "folder:News" to SavedSettings(ViewSettings(sort = Sort.Oldest, offTopics = listOf("rust")), now),
+                    "feed:x" to SavedSettings(ViewSettings(hideWords = listOf("crypto")), now),
+                ),
+            ),
+        )
+        assertEquals(ViewSettings(sort = Sort.Oldest), model.state.value.settings["folder:News"])
+        assertEquals(listOf("crypto"), model.state.value.settings["feed:x"]?.hideWords)
     }
 
     @Test
@@ -1172,7 +1226,7 @@ class ReaderModelTest {
     }
 
     @Test
-    fun `unread counts leave out what each feed's and view's words hide`() = runTest {
+    fun `unread counts leave out what each feed's words hide, and a group's or All items' own words hide nothing`() = runTest {
         val model = model()
         model.addWithItems("https://a.example/feed", "budget news", "sports", "weather")
         model.addWithItems("https://b.example/feed", "budget plan", "music")
@@ -1189,8 +1243,12 @@ class ReaderModelTest {
         val view = model.view()
         assertEquals(2, view.unreadByFeed[aId])
         assertEquals(2, view.unreadByFeed[bId])
-        assertEquals(3, (view.tree.single() as TreeRow.Group).unread)
-        assertEquals(3, view.unreadTotal)
+        assertEquals(4, (view.tree.single() as TreeRow.Group).unread)
+        assertEquals(4, view.unreadTotal)
+        assertEquals(4, model.titles().size)
+        model.markAllRead()
+        model.select(Selection.FeedView(bId))
+        assertEquals(0, model.view().unreadByFeed[bId] ?: 0)
     }
 
     @Test
@@ -1208,8 +1266,8 @@ class ReaderModelTest {
     fun `mark all read also marks what the count includes but the list does not show`() = runTest {
         val model = model()
         model.addTagged()
-        model.toggleTopic("Politics", fromArticle = false)
-        model.toggleTopic("Politics", fromArticle = true)
+        model.toggleTopic(listOf(taggedId), "Politics", fromArticle = false)
+        model.toggleTopic(listOf(taggedId), "Politics", fromArticle = true)
         assertEquals(listOf("sports story"), model.titles())
         assertEquals(2, model.view().unreadTotal)
         model.markAllRead()

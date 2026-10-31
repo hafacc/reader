@@ -25,6 +25,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import cc.hafa.reader.R
+import cc.hafa.reader.core.FilterState
 
 /** One chip of a filter row: what it shows, how many articles it covers when counted, and whether it is off. */
 data class FilterChipItem(
@@ -34,8 +35,8 @@ data class FilterChipItem(
     val label: String,
     /** Articles it covers; not shown when null. */
     val count: Int?,
-    /** Whether it is turned off. */
-    val off: Boolean,
+    /** Whether it is on, off, or off in only some feeds. */
+    val state: FilterState,
     /** Turns it off or back on. */
     val onToggle: () -> Unit,
 )
@@ -91,7 +92,7 @@ private fun FilterRow(label: String, chips: List<FilterChipItem>, section: Boole
     ) {
         for (chip in chips) {
             key(chip.key) {
-                TopicChip(chip.label, off = chip.off, onToggle = chip.onToggle, count = chip.count, section = section)
+                TopicChip(chip.label, state = chip.state, onToggle = chip.onToggle, count = chip.count, section = section)
             }
         }
     }

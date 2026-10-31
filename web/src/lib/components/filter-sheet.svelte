@@ -120,6 +120,7 @@ An open article's filters on a phone: a sheet from the bottom over the dimmed ar
     <div class="min-h-0 overflow-y-auto overscroll-contain" bind:this={rows}>
       <FilterRows
         {reader}
+        feedId={filters.feedId}
         sections={filters.sections}
         topics={filters.topics.map((row) => row.map((topic) => ({ topic })))}
         fromArticle

@@ -17,9 +17,8 @@
   let draft = $state("");
 
   const settings = $derived(reader.viewSettings);
-  const words = $derived(
-    mode === "hide" ? settings.hideWords : settings.onlyWords,
-  );
+  const list = $derived(mode === "hide" ? "hideWords" : "onlyWords");
+  const words = $derived(mode === "hide" ? reader.hideWords : reader.onlyWords);
   const orderedWords = $derived(
     byCount(words, (word) => reader.wordCount(word)),
   );
@@ -37,21 +36,13 @@
     mode = next;
   }
 
-  function changeWords(next: string[]): void {
-    logFailure(
-      reader.changeSettings(
-        mode === "hide" ? { hideWords: next } : { onlyWords: next },
-      ),
-    );
-  }
-
   function addWord(): void {
     const word = draft.trim();
     if (
       word !== "" &&
       !words.some((known) => known.toLowerCase() === word.toLowerCase())
     ) {
-      changeWords([...words, word]);
+      logFailure(reader.addWord(list, word));
     }
     draft = "";
   }
@@ -64,7 +55,7 @@
   }
 
   function removeWord(word: string): void {
-    changeWords(words.filter((known) => known !== word));
+    logFailure(reader.removeWord(list, word));
   }
 
   function rename(event: Event): void {
@@ -191,7 +182,12 @@
                 <!-- on a phone the remove button takes taps 44 pixels across around its small circle -->
                 <span class="flex min-h-11 items-center md:min-h-0">
                   <span
-                    class="flex h-8 items-center gap-1.5 whitespace-nowrap rounded-full border border-line pl-3 text-sm md:pr-1"
+                    class="flex h-8 items-center gap-1.5 whitespace-nowrap rounded-full border pl-3 text-sm md:pr-1 {reader.wordMixed(
+                      list,
+                      word,
+                    )
+                      ? "border-dashed border-muted text-muted"
+                      : "border-line"}"
                   >
                     {word}
                     <span class="font-mono text-xs tabular-nums text-muted"

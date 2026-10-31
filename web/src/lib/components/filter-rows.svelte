@@ -8,11 +8,14 @@ The filter chips of an article or a view: a row of sections, then one row of top
 
   const {
     reader,
+    feedId,
     sections,
     topics,
     fromArticle,
   }: {
     reader: Reader;
+    /** Id of the article's feed, whose settings the chips change; left out, each chip changes the view's feeds that have it. */
+    feedId?: string;
     /** Section chips in order, each with the place turning it off stores; counts shown when given. */
     sections: { label: string; place: string; count?: number }[];
     /** Topic rows in order, one per group; counts shown when given. */
@@ -20,6 +23,14 @@ The filter chips of an article or a view: a row of sections, then one row of top
     /** Whether the rows belong to an open article, whose list then holds its rows. */
     fromArticle: boolean;
   } = $props();
+
+  function topicFeeds(topic: string): string[] {
+    return feedId === undefined ? reader.feedsWithTopic(topic) : [feedId];
+  }
+
+  function sectionFeeds(place: string): string[] {
+    return feedId === undefined ? reader.feedsWithSection(place) : [feedId];
+  }
 
   /** Fade a row's ends where more chips lie past them. */
   function edgeFades(row: HTMLElement): () => void {
@@ -54,9 +65,18 @@ The filter chips of an article or a view: a row of sections, then one row of top
             section
             topic={section.label}
             count={section.count}
-            off={reader.sectionOff(section.place)}
+            state={reader.sectionState(
+              sectionFeeds(section.place),
+              section.place,
+            )}
             ontoggle={() =>
-              logFailure(reader.toggleSection(section.place, fromArticle))}
+              logFailure(
+                reader.toggleSection(
+                  sectionFeeds(section.place),
+                  section.place,
+                  fromArticle,
+                ),
+              )}
           />
         </li>
       {/each}
@@ -74,9 +94,15 @@ The filter chips of an article or a view: a row of sections, then one row of top
           <TopicChip
             topic={item.topic}
             count={item.count}
-            off={reader.topicOff(item.topic)}
+            state={reader.topicState(topicFeeds(item.topic), item.topic)}
             ontoggle={() =>
-              logFailure(reader.toggleTopic(item.topic, fromArticle))}
+              logFailure(
+                reader.toggleTopic(
+                  topicFeeds(item.topic),
+                  item.topic,
+                  fromArticle,
+                ),
+              )}
           />
         </li>
       {/each}

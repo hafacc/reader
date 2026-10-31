@@ -335,6 +335,7 @@ class ReaderModel(
                         loaded = true,
                     )
                 }
+                clearViewFilters()
                 select(selectionFromKey(preferences.lastView))
             }
         }
@@ -462,7 +463,11 @@ class ReaderModel(
 
     /** Change the current view's settings and save them. */
     fun changeSettings(change: (ViewSettings) -> ViewSettings) {
-        val key = viewKey(state.value.selection)
+        changeSettingsOf(viewKey(state.value.selection), change)
+    }
+
+    /** Change one view's settings and save them. */
+    private fun changeSettingsOf(key: String, change: (ViewSettings) -> ViewSettings) {
         val next = change(state.value.settings[key] ?: DEFAULT_SETTINGS)
         val now = clock()
         update { current -> current.copy(settings = current.settings + (key to next), settingsTimes = current.settingsTimes + (key to now)) }
@@ -472,31 +477,68 @@ class ReaderModel(
     }
 
     /**
-     * Turn a topic off or back on in the current view. From an article the list
-     * keeps its rows until the next refresh or view change; from the settings
-     * screen everything takes effect at once.
+     * Turn a topic off in the feeds [ids], or back on when it is off in all of
+     * them, in every view they appear in. From an article the list keeps its
+     * rows until the next refresh or view change; from the settings screen
+     * everything takes effect at once.
      */
-    fun toggleTopic(topic: String, fromArticle: Boolean) {
-        changeOffTopics(fromArticle) { offTopics ->
-            if (topicOff(ViewSettings(offTopics = offTopics), topic)) {
-                offTopics.filter { known -> !known.equals(topic, ignoreCase = true) }
-            } else {
-                offTopics + topic
+    fun toggleTopic(ids: List<String>, topic: String, fromArticle: Boolean) {
+        val turnOff = topicState(state.value.settings, ids, topic) != FilterState.Off
+        for (id in ids) {
+            if (topicOff(feedSettings(state.value.settings, id), topic) != turnOff) {
+                changeOffTopics(id, fromArticle) { offTopics ->
+                    if (turnOff) offTopics + topic else offTopics.filter { known -> !known.equals(topic, ignoreCase = true) }
+                }
             }
         }
     }
 
     /**
-     * Turn a section off, with every section under it, or back on, with every
-     * section above it, in the current view; from an article the list holds
-     * as it does for a topic.
+     * Turn a section off in the feeds [ids], with every section under it, or
+     * back on with every section above it when it is off in all of them; from
+     * an article the list holds as it does for a topic.
      */
-    fun toggleSection(place: String, fromArticle: Boolean) {
-        changeOffTopics(fromArticle) { offTopics -> toggledSection(offTopics, place) }
+    fun toggleSection(ids: List<String>, place: String, fromArticle: Boolean) {
+        val turnOff = sectionState(state.value.settings, ids, place) != FilterState.Off
+        for (id in ids) {
+            if (sectionOff(feedSettings(state.value.settings, id).offTopics, place) != turnOff) {
+                changeOffTopics(id, fromArticle) { offTopics -> toggledSection(offTopics, place) }
+            }
+        }
     }
 
-    private fun changeOffTopics(fromArticle: Boolean, change: (List<String>) -> List<String>) {
-        val key = viewKey(state.value.selection)
+    /** Add a word to each of the current view's feeds whose [list] lacks it. */
+    fun addWord(list: WordList, word: String) {
+        for (id in view().filterFeedIds) {
+            val words = list.of(feedSettings(state.value.settings, id))
+            if (words.none { known -> known.equals(word, ignoreCase = true) }) {
+                changeSettingsOf("feed:$id") { current -> list.with(current, words + word) }
+            }
+        }
+    }
+
+    /** Remove a word from each of the current view's feeds whose [list] has it. */
+    fun removeWord(list: WordList, word: String) {
+        for (id in view().filterFeedIds) {
+            val words = list.of(feedSettings(state.value.settings, id))
+            val kept = words.filter { known -> !known.equals(word, ignoreCase = true) }
+            if (kept.size != words.size) {
+                changeSettingsOf("feed:$id") { current -> list.with(current, kept) }
+            }
+        }
+    }
+
+    /** Delete the words and filters older versions stored for a group or All items, which only feeds have now. */
+    private fun clearViewFilters() {
+        for ((key, saved) in state.value.settings) {
+            if (!key.startsWith("feed:") && (saved.hideWords.isNotEmpty() || saved.onlyWords.isNotEmpty() || saved.offTopics.isNotEmpty())) {
+                changeSettingsOf(key) { current -> current.copy(hideWords = emptyList(), onlyWords = emptyList(), offTopics = emptyList()) }
+            }
+        }
+    }
+
+    private fun changeOffTopics(feedId: String, fromArticle: Boolean, change: (List<String>) -> List<String>) {
+        val key = "feed:$feedId"
         val before = state.value.settings[key] ?: DEFAULT_SETTINGS
         update { current ->
             current.copy(
@@ -507,7 +549,7 @@ class ReaderModel(
                 },
             )
         }
-        changeSettings { current -> current.copy(offTopics = change(current.offTopics)) }
+        changeSettingsOf(key) { current -> current.copy(offTopics = change(current.offTopics)) }
     }
 
     /**
@@ -1356,6 +1398,7 @@ class ReaderModel(
             remember(mapOf("$SETTINGS_TOMBSTONE$key" to removedAt))
         }
         forget(forgotten)
+        clearViewFilters()
         if (change.feeds.isNotEmpty()) {
             select(state.value.selection)
         }
