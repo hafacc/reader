@@ -38,7 +38,7 @@
 
 <span class="relative inline-flex" aria-hidden="true">
   <span
-    class="inline-flex shrink-0 items-center justify-center rounded-full bg-accent font-[650] leading-none text-page"
+    class="bg-accent text-page inline-flex shrink-0 items-center justify-center rounded-full leading-none font-[650]"
     style:width="{size}px"
     style:height="{size}px"
     style:font-size="{size / 2}px"

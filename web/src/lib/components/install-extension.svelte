@@ -10,7 +10,7 @@
     </h1>
     <p class="text-muted">{copy.extensionBody}</p>
     <a
-      class="self-start rounded bg-accent px-4 py-2 text-sm font-semibold text-page"
+      class="bg-accent text-page self-start rounded px-4 py-2 text-sm font-semibold"
       href={chromeWebStoreUrl}
       target="_blank"
       rel="noopener noreferrer"

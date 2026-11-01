@@ -14,7 +14,7 @@
 </script>
 
 <fieldset
-  class="m-0 flex min-w-0 rounded-lg border-0 bg-side p-0.5 text-sm"
+  class="bg-side m-0 flex min-w-0 rounded-lg border-0 p-0.5 text-sm"
   aria-label={label}
 >
   {#each options as option (option.value)}

@@ -42,7 +42,7 @@
     </div>
   {:else if deletion.view === "loading"}
     <div
-      class="col-start-1 row-start-1 flex animate-[appear_200ms_ease-out_150ms_both] items-start justify-start motion-reduce:animate-[appear_1ms_linear_150ms_both] pt-1"
+      class="col-start-1 row-start-1 flex animate-[appear_200ms_ease-out_150ms_both] items-start justify-start pt-1 motion-reduce:animate-[appear_1ms_linear_150ms_both]"
       role="status"
       out:fade={shift}
     >
@@ -58,7 +58,7 @@
       <p class="not-prose -mt-3 mb-5">
         <button
           type="button"
-          class="text-sm text-accent underline underline-offset-4 hover:no-underline disabled:opacity-60"
+          class="text-accent text-sm underline underline-offset-4 hover:no-underline disabled:opacity-60"
           disabled={deletion.stage === "working"}
           onclick={() => deletion.useOtherAccount()}
         >
@@ -68,7 +68,7 @@
       <p>{copy.deleteExplain}</p>
       {#if deletion.stage === "failed"}
         <p
-          class="not-prose my-5 rounded-lg border border-danger/40 bg-danger/10 px-4 py-3 text-sm text-danger"
+          class="not-prose border-danger/40 bg-danger/10 text-danger my-5 rounded-lg border px-4 py-3 text-sm"
           role="alert"
         >
           {copy.deleteFailedPage}
@@ -102,9 +102,9 @@
         </button>
       </div>
       {#if deletion.signInProblem === "blocked"}
-        <p class="text-sm text-muted" role="alert">{copy.syncPopupBlocked}</p>
+        <p class="text-muted text-sm" role="alert">{copy.syncPopupBlocked}</p>
       {:else if deletion.signInProblem === "failed"}
-        <p class="text-sm text-muted" role="alert">{copy.syncSignInFailed}</p>
+        <p class="text-muted text-sm" role="alert">{copy.syncSignInFailed}</p>
       {/if}
       {@render android()}
     </div>
@@ -112,5 +112,5 @@
 </div>
 
 {#snippet android()}
-  <p class="mt-8 text-sm text-muted">{copy.deleteAndroid}</p>
+  <p class="text-muted mt-8 text-sm">{copy.deleteAndroid}</p>
 {/snippet}

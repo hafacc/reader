@@ -385,7 +385,7 @@
 <article class="relative flex h-full min-h-0 flex-col">
   <!-- on a phone Back and the article's actions sit at the bottom, where a thumb reaches them, as on Android -->
   <header
-    class="order-last flex h-[calc(4rem+env(safe-area-inset-bottom))] shrink-0 items-center gap-1 border-t border-line bg-side px-1 pb-[env(safe-area-inset-bottom)] md:hidden"
+    class="border-line bg-side order-last flex h-[calc(4rem+env(safe-area-inset-bottom))] shrink-0 items-center gap-1 border-t px-1 pb-[env(safe-area-inset-bottom)] md:hidden"
   >
     <button
       type="button"
@@ -413,7 +413,7 @@
           <ListFilter class="size-5" />
           {#if filtersOff}
             <span
-              class="pointer-events-none absolute top-2.5 right-2.5 size-2 rounded-full bg-accent ring-2 ring-side"
+              class="bg-accent ring-side pointer-events-none absolute top-2.5 right-2.5 size-2 rounded-full ring-2"
               aria-hidden="true"
             ></span>
           {/if}
@@ -421,7 +421,7 @@
       {/if}
       <button
         type="button"
-        class="grid size-12 place-items-center rounded-md text-muted"
+        class="text-muted grid size-12 place-items-center rounded-md"
         aria-label={copy.star}
         aria-pressed={entry.starred}
         onclick={() => logFailure(reader.toggleStar())}
@@ -430,7 +430,7 @@
       </button>
       <button
         type="button"
-        class="grid size-12 place-items-center rounded-md text-muted"
+        class="text-muted grid size-12 place-items-center rounded-md"
         aria-label={shownRead ? copy.markUnread : copy.markRead}
         onclick={() => logFailure(reader.toggleRead())}
       >
@@ -443,14 +443,14 @@
       {#if entry.url}
         <button
           type="button"
-          class="grid size-12 place-items-center rounded-md text-muted"
+          class="text-muted grid size-12 place-items-center rounded-md"
           aria-label={copied ? copy.copied : copy.share}
           onclick={share}
         >
           <Share class="size-5" />
         </button>
         <a
-          class="grid size-12 place-items-center rounded-md text-muted"
+          class="text-muted grid size-12 place-items-center rounded-md"
           href={entry.url}
           target="_blank"
           rel="noopener noreferrer"
@@ -481,7 +481,7 @@
       >
         <div class="flex flex-col gap-3">
           <h1
-            class="font-reading text-3xl font-bold leading-tight text-balance"
+            class="font-reading text-3xl leading-tight font-bold text-balance"
           >
             {#if entry.url}
               <a
@@ -496,7 +496,7 @@
             {/if}
           </h1>
           <div class="flex items-center justify-between gap-3">
-            <p class="min-w-0 font-mono text-xs text-muted">{byline}</p>
+            <p class="text-muted min-w-0 font-mono text-xs">{byline}</p>
             <div class="relative -my-2 -mr-2 hidden shrink-0 md:flex">
               {#if hasFilters}
                 <button
@@ -516,7 +516,7 @@
                   <ListFilter class="size-4" />
                   {#if filtersOff}
                     <span
-                      class="pointer-events-none absolute top-0.5 right-0.5 size-2 rounded-full bg-accent ring-2 ring-page"
+                      class="bg-accent ring-page pointer-events-none absolute top-0.5 right-0.5 size-2 rounded-full ring-2"
                       aria-hidden="true"
                     ></span>
                   {/if}
@@ -532,7 +532,7 @@
               {/if}
               <button
                 type="button"
-                class="grid size-8 place-items-center rounded-md text-muted hover:bg-side hover:text-ink"
+                class="text-muted hover:bg-side hover:text-ink grid size-8 place-items-center rounded-md"
                 aria-label={copy.star}
                 aria-pressed={entry.starred}
                 title={copy.star}
@@ -544,7 +544,7 @@
               </button>
               <button
                 type="button"
-                class="grid size-8 place-items-center rounded-md text-muted hover:bg-side hover:text-ink"
+                class="text-muted hover:bg-side hover:text-ink grid size-8 place-items-center rounded-md"
                 aria-label={shownRead ? copy.markUnread : copy.markRead}
                 title={shownRead ? copy.markUnread : copy.markRead}
                 onclick={() => logFailure(reader.toggleRead())}
@@ -568,14 +568,14 @@
             {@attach measureLead}
           >
         {/if}
-        <div class="prose max-w-none font-reading prose-img:rounded">
+        <div class="prose font-reading prose-img:rounded max-w-none">
           <!-- biome-ignore lint/nursery/noSvelteAtHtmlTags: the body is sanitized in the reader -->
           {@html reader.body}
         </div>
         <div class="hidden flex-wrap gap-2 text-xs md:flex">
           {#if entry.url}
             <a
-              class="flex items-center gap-1.5 rounded-lg border border-line px-3 py-2 hover:bg-side"
+              class="border-line hover:bg-side flex items-center gap-1.5 rounded-lg border px-3 py-2"
               href={entry.url}
               target="_blank"
               rel="noopener noreferrer"
@@ -585,7 +585,7 @@
             </a>
             <button
               type="button"
-              class="flex items-center gap-1.5 rounded-lg border border-line px-3 py-2 hover:bg-side"
+              class="border-line hover:bg-side flex items-center gap-1.5 rounded-lg border px-3 py-2"
               onclick={share}
             >
               <Share class="size-3.5" />
@@ -596,7 +596,7 @@
       </div>
     {:else}
       <div
-        class="flex h-full min-h-40 flex-col items-center justify-center gap-4 p-8 text-sm text-muted"
+        class="text-muted flex h-full min-h-40 flex-col items-center justify-center gap-4 p-8 text-sm"
       >
         <p>{copy.selectEntry}</p>
       </div>

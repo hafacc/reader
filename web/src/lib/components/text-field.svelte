@@ -29,7 +29,7 @@
   <span class="font-medium">{label}</span>
   <input
     {id}
-    class="rounded-lg border border-line bg-panel px-3 py-2"
+    class="border-line bg-panel rounded-lg border px-3 py-2"
     list={suggestions.length > 0 ? `${id}-names` : undefined}
     {placeholder}
     {value}

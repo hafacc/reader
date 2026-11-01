@@ -110,11 +110,11 @@ An open article's filters on a phone: a sheet from the bottom over the dimmed ar
     transition:fly={{ y: 400, duration: MOTION_MS }}
   >
     <span
-      class="mx-auto my-2.5 h-1 w-9 shrink-0 rounded-full bg-line"
+      class="bg-line mx-auto my-2.5 h-1 w-9 shrink-0 rounded-full"
       aria-hidden="true"
     ></span>
     <h2 class="flex items-center gap-2 pb-2 text-base font-semibold">
-      <ListFilter class="size-5 text-muted" aria-hidden="true" />
+      <ListFilter class="text-muted size-5" aria-hidden="true" />
       {copy.filters}
     </h2>
     <div class="min-h-0 overflow-y-auto overscroll-contain" bind:this={rows}>

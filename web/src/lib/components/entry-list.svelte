@@ -272,15 +272,15 @@
   });
 </script>
 
-<section class="relative flex h-full min-h-0 flex-col border-line md:border-r">
+<section class="border-line relative flex h-full min-h-0 flex-col md:border-r">
   <!-- on a phone the bar sits at the bottom, where a thumb reaches it, as on Android -->
   <header
-    class="order-last flex h-[calc(4rem+env(safe-area-inset-bottom))] shrink-0 items-center gap-1 border-t border-line bg-side px-1 pb-[env(safe-area-inset-bottom)] text-sm md:order-none md:h-14 md:gap-2 md:border-t-0 md:border-b md:bg-transparent md:px-4 md:pb-0"
+    class="border-line bg-side order-last flex h-[calc(4rem+env(safe-area-inset-bottom))] shrink-0 items-center gap-1 border-t px-1 pb-[env(safe-area-inset-bottom)] text-sm md:order-none md:h-14 md:gap-2 md:border-t-0 md:border-b md:bg-transparent md:px-4 md:pb-0"
   >
     <!-- the logo and the view's name are one button that opens the feed list, as on Android -->
     <button
       type="button"
-      class="flex h-12 min-w-0 items-center gap-2 rounded-md pr-1.5 pl-2.5 text-lg font-semibold hover:bg-side md:hidden"
+      class="hover:bg-side flex h-12 min-w-0 items-center gap-2 rounded-md pr-1.5 pl-2.5 text-lg font-semibold md:hidden"
       aria-label={copy.showFeedsFrom(reader.viewTitle)}
       aria-describedby={reader.refreshSuggested ? "due-note" : undefined}
       onclick={onmenu}
@@ -295,13 +295,13 @@
         {/if}
       </span>
       <span class="truncate">{reader.viewTitle}</span>
-      <ChevronsUpDown class="-ml-1 size-4 shrink-0 text-muted" />
+      <ChevronsUpDown class="text-muted -ml-1 size-4 shrink-0" />
     </button>
     {#if reader.refreshSuggested}
       <span id="due-note" class="sr-only">{copy.refreshSuggested}</span>
     {/if}
     <span
-      class="hidden whitespace-nowrap font-mono text-xs tabular-nums text-muted md:inline"
+      class="text-muted hidden font-mono text-xs whitespace-nowrap tabular-nums md:inline"
       >{copy.unread(reader.viewUnread)}</span
     >
     <span class="flex-1"></span>
@@ -335,7 +335,7 @@
     </button>
     <button
       type="button"
-      class="grid size-12 place-items-center rounded-md md:size-8 text-muted hover:bg-side disabled:opacity-40 disabled:hover:bg-transparent"
+      class="text-muted hover:bg-side grid size-12 place-items-center rounded-md disabled:opacity-40 disabled:hover:bg-transparent md:size-8"
       aria-label={copy.markAllRead}
       title={copy.markAllRead}
       disabled={!reader.canMarkAllRead}
@@ -382,7 +382,7 @@
     >
       {#if shownFeed?.error}
         <p
-          class="flex items-center gap-3 border-b border-line bg-danger/10 px-4 py-3 text-sm text-danger"
+          class="border-line bg-danger/10 text-danger flex items-center gap-3 border-b px-4 py-3 text-sm"
         >
           <CircleAlert class="size-5 shrink-0" aria-hidden="true" />
           {shownFeed.error}
@@ -404,7 +404,7 @@
         />
       {:else}
         <p
-          class="flex min-h-40 items-center justify-center px-8 py-12 text-center text-sm text-muted"
+          class="text-muted flex min-h-40 items-center justify-center px-8 py-12 text-center text-sm"
         >
           {copy.noEntries}
         </p>
@@ -416,7 +416,7 @@
           <div class="sr-only focus-within:not-sr-only md:not-sr-only">
             <button
               type="button"
-              class="flex min-h-14 w-full items-center justify-center gap-2 border-b border-line bg-page px-4 text-sm text-ink hover:bg-side disabled:text-muted disabled:hover:bg-transparent"
+              class="border-line bg-page text-ink hover:bg-side disabled:text-muted flex min-h-14 w-full items-center justify-center gap-2 border-b px-4 text-sm disabled:hover:bg-transparent"
               disabled={reader.refreshing}
               aria-busy={reader.refreshing}
               onclick={() => logFailure(reader.refreshView())}
