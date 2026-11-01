@@ -60,6 +60,7 @@ An open article's filters on a wide screen: a box below its filter button, close
   <div class="min-h-0 overflow-y-auto">
     <FilterRows
       {reader}
+      feedId={filters.feedId}
       sections={filters.sections}
       topics={filters.topics.map((row) => row.map((topic) => ({ topic })))}
       fromArticle

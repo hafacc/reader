@@ -166,6 +166,12 @@ data class ReaderView(
     val viewTitle: ViewTitle,
     /** Feeds in the current view; empty means every feed. */
     val viewFeedIds: List<String>,
+    /** Feeds whose words and filters the current view's settings show and change; none in Starred. */
+    val filterFeedIds: List<String>,
+    /** The words of the current view's feeds that hide articles, each once whatever its capitals. */
+    val hideWords: List<String>,
+    /** The words of the current view's feeds that keep only matching articles, each once whatever its capitals. */
+    val onlyWords: List<String>,
     /** The open entry, if any. */
     val current: Entry?,
     /** Unread entries per feed id that the feed's own words and topics keep. */
@@ -228,9 +234,9 @@ private fun <Item> holdOrder(items: List<Item>, keyOf: (Item) -> String, rank: M
 data class UnreadCounts(
     /** Per feed id: unread articles its own words and topics keep. */
     val byFeed: Map<String, Int>,
-    /** Per group: those the group's settings keep as well. */
+    /** Per group: those its feeds' own words and topics keep. */
     val byFolder: Map<String, Int>,
-    /** Those All items' settings keep as well. */
+    /** Those every feed's own words and topics keep. */
     val total: Int,
 )
 
@@ -248,9 +254,9 @@ private data class CountedFrom(
 private var lastCounts: CountedFrom? = null
 
 /**
- * Unread articles a feed's own words and topics keep, per feed; per group and
- * in All items, those that view's settings keep as well. Worked out again only
- * when the entries, feeds or settings change.
+ * Unread articles each feed's own words and topics keep, in the feed, its
+ * group and All items alike. Worked out again only when the entries, feeds or
+ * settings change.
  */
 fun unreadCounts(entries: List<Entry>, feeds: List<Feed>, settings: Map<String, ViewSettings>): UnreadCounts {
     val cached = lastCounts
@@ -265,12 +271,10 @@ fun unreadCounts(entries: List<Entry>, feeds: List<Feed>, settings: Map<String, 
             if (!entry.read && settingsKeep(settings["feed:${entry.feedId}"], entry)) {
                 byFeed[entry.feedId] = (byFeed[entry.feedId] ?: 0) + 1
                 val folder = folderOf[entry.feedId] ?: ""
-                if (folder.isNotEmpty() && settingsKeep(settings["folder:$folder"], entry)) {
+                if (folder.isNotEmpty()) {
                     byFolder[folder] = (byFolder[folder] ?: 0) + 1
                 }
-                if (settingsKeep(settings["all"], entry)) {
-                    total += 1
-                }
+                total += 1
             }
         }
         UnreadCounts(byFeed, byFolder, total).also { counts -> lastCounts = CountedFrom(entries, feeds, settings, counts) }
@@ -285,17 +289,8 @@ fun markedByMarkAllRead(state: ReaderState, visible: Set<String>, entry: Entry):
     !entry.read && (entry.id in visible || countedInView(state, entry))
 
 /** Whether the current view's unread count includes an entry, read or not. */
-fun countedInView(state: ReaderState, entry: Entry): Boolean {
-    val own = settingsKeep(state.settings["feed:${entry.feedId}"], entry)
-    val selection = state.selection
-    return if (selection == Selection.Starred) {
-        true
-    } else if (selection is Selection.FeedView) {
-        own
-    } else {
-        own && settingsKeep(state.settings[viewKey(selection)], entry)
-    }
-}
+fun countedInView(state: ReaderState, entry: Entry): Boolean =
+    state.selection == Selection.Starred || settingsKeep(state.settings["feed:${entry.feedId}"], entry)
 
 /** Group names in use, sorted. */
 fun foldersOf(feeds: List<Feed>): List<String> =
@@ -359,19 +354,13 @@ private fun holding(state: ReaderState, key: String, settings: ViewSettings): Vi
     return if (held == null) settings else settings.copy(offTopics = held)
 }
 
-/** Whether the view's words and topics, and the article's own feed's, keep an article; held topics count instead of current ones. */
-private fun keeps(state: ReaderState, viewSettings: ViewSettings, entry: Entry): Boolean =
+/** Whether the article's own feed's words and topics keep it; held topics count instead of current ones. */
+private fun keeps(state: ReaderState, entry: Entry): Boolean =
     if (state.selection == Selection.Starred) {
         true
     } else {
         val ownKey = "feed:${entry.feedId}"
-        val own = holding(state, ownKey, state.settings[ownKey] ?: DEFAULT_SETTINGS)
-        val view = if (state.selection is Selection.FeedView) {
-            DEFAULT_SETTINGS
-        } else {
-            holding(state, viewKey(state.selection), viewSettings)
-        }
-        passes(own, entry) && passes(view, entry)
+        passes(holding(state, ownKey, state.settings[ownKey] ?: DEFAULT_SETTINGS), entry)
     }
 
 /** Entries of the current view before any rules. */
@@ -417,18 +406,30 @@ class ViewFilters(
     val groupOrder: GroupOrder,
     /** Whether the view filters at all; Starred does not. */
     val applies: Boolean = true,
+    /** Feeds by each topic, lower-cased, that the view's articles carry. */
+    private val topicFeeds: Map<String, Set<String>> = emptyMap(),
+    /** Feeds by each section place that the view's articles fall in. */
+    private val sectionFeeds: Map<String, Set<String>> = emptyMap(),
 ) {
+    /** Feeds in the view whose articles carry [topic]. */
+    fun feedsWithTopic(topic: String): List<String> = topicFeeds[topic.lowercase()]?.toList() ?: emptyList()
+
+    /** Feeds in the view whose articles fall in the section at [place]. */
+    fun feedsWithSection(place: String): List<String> = sectionFeeds[place]?.toList() ?: emptyList()
+
     /** An article's sections and topics as the filter rows show them; none where the view does not filter. */
     fun of(entry: Entry): ArticleFilters =
         if (applies) {
-            ArticleFilters(articleSections[entry.id] ?: emptyList(), groupOrder.articleRows(entry.categories))
+            ArticleFilters(entry.feedId, articleSections[entry.id] ?: emptyList(), groupOrder.articleRows(entry.categories))
         } else {
-            ArticleFilters(emptyList(), emptyList())
+            ArticleFilters(entry.feedId, emptyList(), emptyList())
         }
 }
 
 /** An open article's filters: its section chips, then its topics in one row per group. */
 data class ArticleFilters(
+    /** Id of its feed, whose settings the chips change. */
+    val feedId: String,
     /** Its sections, outermost first. */
     val sections: List<SectionChip>,
     /** Its topics, one row per group of the view. */
@@ -437,11 +438,64 @@ data class ArticleFilters(
     /** Whether it has any chip. */
     val isEmpty: Boolean get() = sections.isEmpty() && topics.isEmpty()
 
-    /** Whether any of its sections or topics is turned off in [settings]. */
-    fun anyOff(settings: ViewSettings): Boolean =
-        sections.any { section -> sectionOff(settings.offTopics, section.place) } ||
-            topics.any { row -> row.any { topic -> topicOff(settings, topic) } }
+    /** Whether any of its sections or topics is turned off in its feed, given every view's [settings] by key. */
+    fun anyOff(settings: Map<String, ViewSettings>): Boolean {
+        val own = feedSettings(settings, feedId)
+        return sections.any { section -> sectionOff(own.offTopics, section.place) } ||
+            topics.any { row -> row.any { topic -> topicOff(own, topic) } }
+    }
 }
+
+/** Whether a filter is on, off, or off in only some of the feeds it covers. */
+enum class FilterState { On, Off, Mixed }
+
+/** Whether a filter is on, off or mixed, given whether each feed has it off. */
+private fun filterState(offs: List<Boolean>): FilterState {
+    val offCount = offs.count { off -> off }
+    return if (offCount == 0) {
+        FilterState.On
+    } else if (offCount == offs.size) {
+        FilterState.Off
+    } else {
+        FilterState.Mixed
+    }
+}
+
+/** Whether a topic is on, off or off in only some of the feeds [ids], given every view's [settings] by key. */
+fun topicState(settings: Map<String, ViewSettings>, ids: List<String>, topic: String): FilterState =
+    filterState(ids.map { id -> topicOff(feedSettings(settings, id), topic) })
+
+/** Whether a section is on, off or off in only some of the feeds [ids], given every view's [settings] by key. */
+fun sectionState(settings: Map<String, ViewSettings>, ids: List<String>, place: String): FilterState =
+    filterState(ids.map { id -> sectionOff(feedSettings(settings, id).offTopics, place) })
+
+/** Which of a feed's word lists. */
+enum class WordList {
+    /** Words that hide matching articles. */
+    Hide,
+
+    /** Words that keep only matching articles. */
+    Only;
+
+    /** This list of [settings]. */
+    fun of(settings: ViewSettings): List<String> = if (this == Hide) settings.hideWords else settings.onlyWords
+
+    /** [settings] with this list set to [words]. */
+    fun with(settings: ViewSettings, words: List<String>): ViewSettings =
+        if (this == Hide) settings.copy(hideWords = words) else settings.copy(onlyWords = words)
+}
+
+/** The words of the feeds [ids] in [list], each once whatever its capitals. */
+private fun wordsOf(settings: Map<String, ViewSettings>, ids: List<String>, list: WordList): List<String> =
+    ids.flatMap { id -> list.of(feedSettings(settings, id)) }.distinctBy { word -> word.lowercase() }
+
+/** Whether [word] is in [list] of only some of the feeds [ids], given every view's [settings] by key. */
+fun wordMixed(settings: Map<String, ViewSettings>, ids: List<String>, list: WordList, word: String): Boolean =
+    !ids.all { id -> list.of(feedSettings(settings, id)).any { known -> known.equals(word, ignoreCase = true) } }
+
+/** Settings of feed [feedId], given every view's [settings] by key. */
+fun feedSettings(settings: Map<String, ViewSettings>, feedId: String): ViewSettings =
+    settings["feed:$feedId"] ?: DEFAULT_SETTINGS
 
 private val NO_FILTERS = ViewFilters(emptyList(), emptyMap(), GroupOrder(emptyList()), applies = false)
 
@@ -482,7 +536,17 @@ private fun filtersOf(selection: Selection, entries: List<Entry>): ViewFilters {
         cached.filters
     } else {
         val byEntry = sectionsByEntry(entries)
-        ViewFilters(sectionCounts(byEntry.values), byEntry, GroupOrder(topicGroups(entries)))
+        val topicFeeds = HashMap<String, MutableSet<String>>()
+        val sectionFeeds = HashMap<String, MutableSet<String>>()
+        for (entry in entries) {
+            for (topic in entry.categories) {
+                topicFeeds.getOrPut(topic.lowercase()) { HashSet() }.add(entry.feedId)
+            }
+            for (section in byEntry[entry.id] ?: emptyList()) {
+                sectionFeeds.getOrPut(section.place) { HashSet() }.add(entry.feedId)
+            }
+        }
+        ViewFilters(sectionCounts(byEntry.values), byEntry, GroupOrder(topicGroups(entries)), true, topicFeeds, sectionFeeds)
             .also { filters -> lastFilters = CountedFilters(entries, filters) }
     }
 }
@@ -497,7 +561,7 @@ fun deriveView(state: ReaderState): ReaderView {
     } else {
         baseEntries.sortedWith(NEWEST_FIRST.reversed())
     }
-    val kept = baseEntries.filter { entry -> keeps(state, viewSettings, entry) }.map { entry -> entry.id }.toSet()
+    val kept = baseEntries.filter { entry -> keeps(state, entry) }.map { entry -> entry.id }.toSet()
     val unreadOnly = state.unreadOnly && selection != Selection.Starred
     val held = state.heldEntries
     val frozen = state.frozenList
@@ -526,6 +590,11 @@ fun deriveView(state: ReaderState): ReaderView {
         is Selection.FeedView -> listOf(selection.id)
         else -> emptyList()
     }
+    val filterFeedIds = when (selection) {
+        Selection.All -> state.feeds.map { feed -> feed.id }
+        Selection.Starred -> emptyList()
+        else -> viewFeedIds
+    }
     return ReaderView(
         viewSettings = viewSettings,
         baseEntries = baseEntries,
@@ -534,6 +603,9 @@ fun deriveView(state: ReaderState): ReaderView {
         filters = filtersOf(selection, baseEntries),
         viewTitle = viewTitle,
         viewFeedIds = viewFeedIds,
+        filterFeedIds = filterFeedIds,
+        hideWords = wordsOf(state.settings, filterFeedIds, WordList.Hide),
+        onlyWords = wordsOf(state.settings, filterFeedIds, WordList.Only),
         current = state.entries.firstOrNull { entry -> entry.id == state.currentId },
         unreadByFeed = unread,
         tree = tree,

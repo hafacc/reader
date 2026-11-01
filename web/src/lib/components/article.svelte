@@ -47,7 +47,9 @@
   // an unread article shows as read while open, since leaving it marks it read
   const shownRead = $derived(entry ? reader.shownRead(entry) : false);
   const filters = $derived(
-    entry ? reader.articleFilters(entry) : { sections: [], topics: [] },
+    entry
+      ? reader.articleFilters(entry)
+      : { feedId: "", sections: [], topics: [] },
   );
   const hasFilters = $derived(
     filters.sections.length > 0 || filters.topics.length > 0,
