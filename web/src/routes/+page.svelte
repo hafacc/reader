@@ -7,6 +7,7 @@
   import AddPane from "#lib/components/add-pane.svelte";
   import Article from "#lib/components/article.svelte";
   import EntryList from "#lib/components/entry-list.svelte";
+  import InfoPane from "#lib/components/info-pane.svelte";
   import InstallExtension from "#lib/components/install-extension.svelte";
   import IosUnavailable from "#lib/components/ios-unavailable.svelte";
   import Logo from "#lib/components/logo.svelte";
@@ -15,16 +16,17 @@
   import ShortcutsPane from "#lib/components/shortcuts-pane.svelte";
   import Sidebar from "#lib/components/sidebar.svelte";
   import SyncStatus from "#lib/components/sync-status.svelte";
-  import { contactUrl, playStoreUrl } from "#lib/config.ts";
+  import { playStoreUrl } from "#lib/config.ts";
   import { copy } from "#lib/copy.ts";
   import { firstRun } from "#lib/first-run.ts";
   import { isEdgeSwipe, type Point } from "#lib/gestures.ts";
+  import { isInfoPage } from "#lib/info-page.ts";
   import { shortcutKey } from "#lib/keys.ts";
   import { isNarrow, NARROW_WIDTH } from "#lib/layout.ts";
   import { detectPlatform, type Platform } from "#lib/platform.ts";
   import { logFailure, Reader, viewKey } from "#lib/reader.svelte.ts";
   import { applyReadingFont } from "#lib/reading-font.ts";
-  import type { Place } from "#lib/types.ts";
+  import type { InfoPage, Place } from "#lib/types.ts";
   import { goto } from "$app/navigation";
   import { asset } from "$app/paths";
   import { page } from "$app/state";
@@ -211,6 +213,7 @@
   const settingsShown = $derived(detail === "settings");
   const addShown = $derived(detail === "add");
   const helpShown = $derived(detail === "help");
+  const infoShown = $derived(isInfoPage(detail) ? detail : undefined);
 
   function togglePane(kind: "settings" | "help"): void {
     if (detail === kind && (screen === "detail" || !isNarrow())) {
@@ -247,6 +250,14 @@
     if (!(helpShown && (screen === "detail" || !isNarrow()))) {
       togglePane("help");
     }
+  }
+
+  /** Show the privacy policy, the terms or how to reach support. */
+  function showInfo(shown: InfoPage): void {
+    menuOpen = false;
+    detail = shown;
+    screen = "detail";
+    remember(isNarrow());
   }
 
   function toggleSettings(): void {
@@ -434,9 +445,14 @@
         onpick={showList}
         onadd={startAdding}
         onaccount={showAccount}
+        oncontact={() => showInfo("contact")}
       />
     </div>
-    {#if reader.feeds.length === 0}
+    {#if reader.feeds.length === 0 && infoShown}
+      <div class="min-h-0 md:col-span-2">
+        <InfoPane page={infoShown} onback={back} onpage={showInfo} />
+      </div>
+    {:else if reader.feeds.length === 0}
       <div
         class="flex min-h-0 flex-col md:col-span-2"
         role="presentation"
@@ -478,11 +494,13 @@
                   {/if}
                 {/snippet}
               </AddFeed>
-              <a
+              <button
+                type="button"
                 class="mb-6 text-sm text-muted underline hover:text-ink"
-                href={contactUrl}
-                >{copy.contactUs}</a
+                onclick={() => showInfo("contact")}
               >
+                {copy.contactUs}
+              </button>
             </div>
           {/if}
         </div>
@@ -516,7 +534,9 @@
           : "hidden"} max-md:motion-safe:animate-screen-in md:block"
       >
         {#if helpShown}
-          <ShortcutsPane {reader} onback={back} />
+          <ShortcutsPane {reader} onback={back} onpage={showInfo} />
+        {:else if infoShown}
+          <InfoPane page={infoShown} onback={back} onpage={showInfo} />
         {:else if addShown}
           <AddPane {reader} onback={back} ondone={finishAdding} />
         {:else if settingsShown}
@@ -551,6 +571,7 @@
           onpick={showList}
           onadd={startAdding}
           onaccount={showAccount}
+          oncontact={() => showInfo("contact")}
         />
       </div>
     </div>

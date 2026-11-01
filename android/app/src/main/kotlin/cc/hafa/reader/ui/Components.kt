@@ -255,10 +255,16 @@ suspend fun BottomAppBarScrollBehavior.showBar() {
 /** The bottom bar of a form screen: Back and the screen's name, above the keyboard while typing. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun BackBottomBar(title: String, scrollBehavior: BottomAppBarScrollBehavior, onBack: () -> Unit) {
+fun BackBottomBar(
+    title: String,
+    scrollBehavior: BottomAppBarScrollBehavior,
+    onBack: () -> Unit,
+    end: @Composable RowScope.() -> Unit = {},
+) {
     ReaderBottomBar(scrollBehavior) {
         BackButton(onBack)
         BarTitle(title)
+        end()
     }
 }
 

@@ -48,6 +48,8 @@ export default defineConfig(({ command }) => {
       alias: {
         // biome-ignore lint/style/useNamingConvention: alias names start with a dollar sign like SvelteKit's own
         $shared: new URL("../shared/src", import.meta.url).pathname,
+        // biome-ignore lint/style/useNamingConvention: alias names start with a dollar sign like SvelteKit's own
+        $policy: new URL("../shared/policy", import.meta.url).pathname,
       },
     },
     build: { target: "es2024" },

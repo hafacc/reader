@@ -622,8 +622,16 @@ decides). Web with the extension closed gets nothing until a device opens.
   sidebar collapses to an icon strip, which opens over the list when hovered; icons
   and rows keep their positions so the change is a smooth width and fade.
   Below the feeds, in this order: a "Contact us" row that opens the contact
-  page (in the browser on Android), shown signed in or not on every layout so
-  contact details are easy to find in the app; the sync row; and Add feed.
+  page, shown signed in or not on every layout so contact details are easy to
+  find in the app; a "Feedback" row that opens GitHub issues; the sync row; and
+  Add feed.
+- **Info pages:** the privacy policy, the terms and the contact page open inside
+  the app on every surface, each with a button beside its title (in the bottom
+  bar on a phone) that opens the same page on the web. Links between them stay
+  in the app; other links open outside it. The policies' text is written once,
+  in `shared/policy/`, which the web pages and the Android app both show. The
+  contact page and the account's links (Privacy, Terms, Contact, Feedback) link
+  to GitHub issues for feedback.
 - **Account picture:** when signed in, the sidebar's sync row and the account
   card show the Google account's picture in a round avatar (asked for at 96
   pixels, https only, without a referrer), with the email's first letter until

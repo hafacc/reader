@@ -78,6 +78,12 @@ enum class Detail {
 
     /** How to reach support. */
     Contact,
+
+    /** The privacy policy. */
+    Privacy,
+
+    /** The terms of service. */
+    Terms,
 }
 
 /** A short message for the snackbar. */
@@ -237,7 +243,7 @@ class ReaderViewModel(application: Application) : AndroidViewModel(application) 
     /** Go to the article list. */
     fun showList() {
         screen = Screen.List
-        if (detail == Detail.Add || detail == Detail.Account || detail == Detail.Contact) {
+        if (detail != Detail.Article && detail != Detail.Settings) {
             detail = Detail.Article
         }
     }
@@ -281,8 +287,13 @@ class ReaderViewModel(application: Application) : AndroidViewModel(application) 
 
     /** Show how to reach support. */
     fun showContact() {
+        showInfo(Detail.Contact)
+    }
+
+    /** Show how to reach support, the privacy policy or the terms. */
+    fun showInfo(page: Detail) {
         closeArticle()
-        detail = Detail.Contact
+        detail = page
         screen = Screen.Detail
     }
 

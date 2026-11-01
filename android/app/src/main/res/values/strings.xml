@@ -127,4 +127,14 @@
     <string name="contact_write">write an email</string>
     <string name="contact_copy">copy the address</string>
     <string name="contact_copied">Address copied</string>
+    <string name="feedback">Feedback</string>
+    <string name="privacy_title">Privacy policy</string>
+    <string name="terms_title">Terms of service</string>
+    <string name="open_on_web">Open on the web</string>
+    <string name="contact_feedback">Found a bug or have an idea? Share feedback</string>
+    <string name="contact_feedback_link">on GitHub</string>
+    <string name="contact_delete">To delete your account, use the</string>
+    <string name="contact_delete_link">delete account page</string>
+    <string name="contact_privacy">What Reader stores, and where, is in the</string>
+    <string name="contact_privacy_link">privacy policy</string>
 </resources>

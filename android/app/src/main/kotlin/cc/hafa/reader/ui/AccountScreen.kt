@@ -174,7 +174,7 @@ fun AccountAvatar(email: String, photoUrl: String, status: SyncStatus, large: Bo
     }
 }
 
-/** Sign-in and sync: signed out, waiting for the account choice, or signed in; with the privacy policy and terms. */
+/** Sign-in and sync: signed out, waiting for the account choice, or signed in; with links to the privacy policy, terms, contact and feedback. */
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun AccountScreen(viewModel: ReaderViewModel) {
@@ -248,7 +248,7 @@ fun AccountScreen(viewModel: ReaderViewModel) {
                     ErrorNote(stringResource(R.string.sync_sign_in_failed))
                 }
             }
-            Policies(viewModel::showContact)
+            Policies(viewModel::showInfo)
         }
     }
 }
@@ -288,14 +288,15 @@ private fun Note(text: AnnotatedString) {
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun Policies(onContact: () -> Unit) {
+private fun Policies(onPage: (Detail) -> Unit) {
     val links = LocalUriHandler.current
     val colors = ReaderTheme.colors
     FlowRow(Modifier.fillMaxWidth().padding(top = 12.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         val pages = listOf(
-            R.string.privacy to { links.openUri(SyncConfig.PRIVACY_URL) },
-            R.string.terms to { links.openUri(SyncConfig.TERMS_URL) },
-            R.string.contact to onContact,
+            R.string.privacy to { onPage(Detail.Privacy) },
+            R.string.terms to { onPage(Detail.Terms) },
+            R.string.contact to { onPage(Detail.Contact) },
+            R.string.feedback to { links.openUri(SyncConfig.FEEDBACK_URL) },
         )
         for ((label, open) in pages) {
             TextButton(onClick = open, colors = ButtonDefaults.textButtonColors(contentColor = colors.muted)) {
