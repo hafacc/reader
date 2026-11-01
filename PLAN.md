@@ -593,7 +593,8 @@ decides). Web with the extension closed gets nothing until a device opens.
   the list up past its end, started with it already there (on the web with every row
   drawn), checks them too, built as the article's pull is: the same distance (96),
   `pullStretch`, marker below the list's end turning over at that point ("Release to
-  refresh"), tick and spring back; letting go past it checks the feeds as pulling down
+  refresh"; on Android, Material's pull to refresh indicator as at the top, coming up
+  from the end and centered in the gap once there), tick and spring back; letting go past it checks the feeds as pulling down
   does, and the marker then turns there until they are checked. While they are being
   checked neither pull does anything (no stretch, marker or tick; the list scrolls as
   usual and the turning marker stays where it is), and a refresh starting midway ends

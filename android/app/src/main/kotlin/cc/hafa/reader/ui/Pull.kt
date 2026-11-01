@@ -15,6 +15,8 @@ import androidx.compose.material.icons.outlined.ArrowDownward
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.pulltorefresh.PullToRefreshDefaults
+import androidx.compose.material3.pulltorefresh.PullToRefreshState
+import androidx.compose.runtime.State
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
@@ -99,6 +101,10 @@ class EdgeDrag(
     /** Whether letting go now acts. */
     val armed: Boolean
         get() = abs(travel) >= threshold
+
+    /** How far along the pull is toward letting go acting, 1 there and more past it, by how far the content moved when it moves at all. */
+    val progress: Float
+        get() = if (thresholdOffset != 0f) abs(offset / thresholdOffset) else abs(travel) / threshold
 
     /** Whether a drag may start; one under way goes on unless [cancel]ed. */
     var enabled: Boolean = true
@@ -275,5 +281,56 @@ fun PullIndicator(pull: EdgeDrag, padding: PaddingValues, armedLabel: String, sp
                 }
             }
         }
+    }
+}
+
+/** Material's pull to refresh state, read from [pull], held where letting go began to act while [resting] is 1. */
+private class EdgePullState(private val pull: EdgeDrag, private val resting: State<Float>) : PullToRefreshState {
+    override val distanceFraction: Float
+        get() = maxOf(pull.progress, resting.value)
+
+    override val isAnimating: Boolean
+        get() = false
+
+    // The pull moves itself; Material's indicator only reads it.
+    override suspend fun animateToThreshold() = Unit
+
+    override suspend fun animateToHidden() = Unit
+
+    override suspend fun snapTo(targetValue: Float) = Unit
+}
+
+/**
+ * Material's own pull to refresh indicator, as at the list's top, for a pull past the list's end: rising from the
+ * end, inside [padding], into the gap [pull] opens, centered in it once letting go acts, when screen readers hear
+ * [armedLabel]. While [refreshing], it spins there until that ends.
+ */
+@Composable
+fun EndRefreshIndicator(pull: EdgeDrag, padding: PaddingValues, armedLabel: String, refreshing: Boolean) {
+    val resting = animateFloatAsState(if (refreshing) 1f else 0f, label = "end refresh rest")
+    val state = remember(pull, resting) { EdgePullState(pull, resting) }
+    val armed by remember(pull) { derivedStateOf { pull.armed } }
+    val density = LocalDensity.current
+    // Material moves the indicator by this much per unit of progress, less its own size: half the gap, so it is centered.
+    val threshold = with(density) { maxOf(pull.thresholdOffset.toDp() / 2, INDICATOR_SIZE) } + INDICATOR_SIZE / 2
+    Box(
+        Modifier
+            .fillMaxSize()
+            .padding(top = padding.calculateTopPadding(), bottom = padding.calculateBottomPadding())
+            // Turned over, Material's indicator comes from the bottom rather than the top.
+            .graphicsLayer { rotationZ = 180f },
+        contentAlignment = Alignment.TopCenter,
+    ) {
+        PullToRefreshDefaults.Indicator(
+            state,
+            refreshing,
+            Modifier.semantics {
+                liveRegion = LiveRegionMode.Polite
+                if (armed) {
+                    contentDescription = armedLabel
+                }
+            },
+            maxDistance = threshold,
+        )
     }
 }
