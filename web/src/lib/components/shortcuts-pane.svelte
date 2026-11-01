@@ -113,12 +113,12 @@
     <div class="mx-auto flex max-w-xl flex-col gap-6">
       <!-- on a phone the account screen's title is in its bottom bar alone -->
       <div class="hidden items-start justify-between gap-4 md:flex">
-        <h1 class="font-reading text-3xl font-bold leading-tight">
+        <h1 class="font-reading text-3xl leading-tight font-bold">
           {copy.shortcutsTitle}
         </h1>
         <button
           type="button"
-          class="hidden rounded-md p-1.5 text-muted hover:bg-side md:block"
+          class="text-muted hover:bg-side hidden rounded-md p-1.5 md:block"
           aria-label={copy.close}
           onclick={onback}
         >
@@ -127,7 +127,7 @@
       </div>
 
       <section
-        class="flex flex-col items-start gap-3 rounded-lg border border-line p-4 text-sm"
+        class="border-line flex flex-col items-start gap-3 rounded-lg border p-4 text-sm"
       >
         <h2 class="hidden font-semibold md:block">{copy.syncHeading}</h2>
         {#if sync.status === "waiting"}
@@ -139,14 +139,14 @@
           <div class="flex flex-wrap gap-2">
             <button
               type="button"
-              class="rounded-lg border border-line px-3 py-2 hover:bg-side"
+              class="border-line hover:bg-side rounded-lg border px-3 py-2"
               onclick={() => reportFailure(sync.replaceLocal())}
             >
               {copy.syncSwitchReplace}
             </button>
             <button
               type="button"
-              class="rounded-lg border border-line px-3 py-2 hover:bg-side"
+              class="border-line hover:bg-side rounded-lg border px-3 py-2"
               onclick={() => reportFailure(sync.signOut())}
             >
               {copy.syncSwitchCancel}
@@ -163,7 +163,7 @@
             />
             <span class="flex min-w-0 flex-col leading-snug">
               <span class="text-muted">{copy.syncSignedInAs}</span>
-              <span class="truncate text-ink">{sync.email}</span>
+              <span class="text-ink truncate">{sync.email}</span>
             </span>
           </div>
           <p class="flex items-center gap-2">
@@ -188,7 +188,7 @@
           </div>
           <button
             type="button"
-            class="flex items-center gap-1.5 rounded-lg border border-line px-3 py-2 hover:bg-side"
+            class="border-line hover:bg-side flex items-center gap-1.5 rounded-lg border px-3 py-2"
             onclick={() => reportFailure(sync.signOut())}
           >
             <LogOut class="size-3.5" />
@@ -208,7 +208,7 @@
           <p class="text-muted">{copy.syncExplain}</p>
           <button
             type="button"
-            class="flex items-center gap-1.5 rounded-lg border border-line px-3 py-2 hover:bg-side"
+            class="border-line hover:bg-side flex items-center gap-1.5 rounded-lg border px-3 py-2"
             disabled={sync.status === "connecting"}
             onclick={() => sync.signIn()}
           >
@@ -221,18 +221,18 @@
             <p class="text-muted">{copy.syncSignInFailed}</p>
           {/if}
         {/if}
-        <p class="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted">
+        <p class="text-muted flex flex-wrap gap-x-4 gap-y-1 text-xs">
           {#each pages as { page, label } (page)}
             <button
               type="button"
-              class="underline hover:text-ink"
+              class="hover:text-ink underline"
               onclick={() => onpage(page)}
             >
               {label}
             </button>
           {/each}
           <a
-            class="underline hover:text-ink"
+            class="hover:text-ink underline"
             href={feedbackUrl}
             target="_blank"
             rel="noopener noreferrer"
@@ -242,17 +242,17 @@
       </section>
 
       <!-- on a phone this pane is the account screen: no key list -->
-      <ul class="hidden flex-col divide-y divide-line text-sm md:flex">
+      <ul class="divide-line hidden flex-col divide-y text-sm md:flex">
         {#each shortcuts as shortcut (shortcut.label)}
           <li class="flex items-center justify-between gap-4 py-2.5">
             <span>{shortcut.label}</span>
             <span class="flex shrink-0 items-center gap-1.5">
               {#each shortcut.keys as key, index (index)}
                 {#if shortcut.either && index > 0}
-                  <span class="text-xs text-muted">/</span>
+                  <span class="text-muted text-xs">/</span>
                 {/if}
                 <kbd
-                  class="min-w-6 rounded-md border border-line bg-side px-1.5 py-0.5 text-center font-mono text-xs"
+                  class="border-line bg-side min-w-6 rounded-md border px-1.5 py-0.5 text-center font-mono text-xs"
                   >{key}</kbd
                 >
               {/each}

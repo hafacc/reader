@@ -35,11 +35,11 @@
       : "ps-3"} {STYLES[state]}"
   >
     {#if section}
-      <Link class="size-3.5 text-muted" aria-hidden="true" />
+      <Link class="text-muted size-3.5" aria-hidden="true" />
     {/if}
     {topic}
     {#if count !== undefined}
-      <span class="font-mono text-xs tabular-nums text-muted">{count}</span>
+      <span class="text-muted font-mono text-xs tabular-nums">{count}</span>
     {/if}
   </span>
 {/snippet}

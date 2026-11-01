@@ -106,10 +106,10 @@
 </script>
 
 <div
-  class="relative overflow-hidden border-b border-line [contain-intrinsic-size:auto_7.5rem] [content-visibility:auto]"
+  class="border-line relative overflow-hidden border-b [contain-intrinsic-size:auto_7.5rem] [content-visibility:auto]"
 >
   <div
-    class="absolute inset-0 flex items-center justify-between bg-accent-soft px-6 text-accent"
+    class="bg-accent-soft text-accent absolute inset-0 flex items-center justify-between px-6"
     aria-hidden="true"
   >
     {#if read}
@@ -142,7 +142,7 @@
       onclick={onClick}
     >
       <span class="flex min-w-0 flex-1 flex-col gap-1">
-        <span class="truncate font-mono text-xs text-muted">
+        <span class="text-muted truncate font-mono text-xs">
           {source}{entry.dated === false ? "" : ` · ${age(entry.published)}`}
         </span>
         <span
@@ -158,7 +158,7 @@
           >{entry.excerpt}</span
         >
         {#if topics.length > 0}
-          <span class="truncate pr-[4.5rem] text-xs text-faded"
+          <span class="text-faded truncate pr-[4.5rem] text-xs"
             >{topics.join(" · ")}</span
           >
         {/if}
@@ -173,10 +173,10 @@
         >
       {/if}
     </button>
-    <div class="absolute bottom-1.5 right-2 flex">
+    <div class="absolute right-2 bottom-1.5 flex">
       <button
         type="button"
-        class="grid size-8 place-items-center rounded-md text-muted hover:bg-line hover:text-ink"
+        class="text-muted hover:bg-line hover:text-ink grid size-8 place-items-center rounded-md"
         aria-label={copy.star}
         aria-pressed={entry.starred}
         title={copy.star}
@@ -186,7 +186,7 @@
       </button>
       <button
         type="button"
-        class="grid size-8 place-items-center rounded-md text-muted hover:bg-line hover:text-ink"
+        class="text-muted hover:bg-line hover:text-ink grid size-8 place-items-center rounded-md"
         aria-label={read ? copy.markUnread : copy.markRead}
         title={read ? copy.markUnread : copy.markRead}
         onclick={ontoggle}
