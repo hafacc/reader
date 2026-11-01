@@ -253,7 +253,7 @@ fun EntryList(snapshot: Snapshot, viewModel: ReaderViewModel, listState: LazyLis
                 }
                 PullToRefreshDefaults.Indicator(pullState, topRefreshing, Modifier.align(Alignment.TopCenter))
             }
-            PullIndicator(endPull, padding, stringResource(R.string.release_to_refresh), spinning = refreshing && refreshFromEnd)
+            EndRefreshIndicator(endPull, padding, stringResource(R.string.release_to_refresh), refreshing = refreshing && refreshFromEnd)
         }
     }
 }
