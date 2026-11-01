@@ -18,6 +18,8 @@ sourceSets {
     test {
         // The fixtures every client's tests must pass, read in place.
         resources.srcDir("../../shared/fixtures")
+        // The policies, as the app shows them.
+        resources.srcDir("../../shared/policy")
     }
 }
 

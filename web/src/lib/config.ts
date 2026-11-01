@@ -8,14 +8,14 @@
 /** The Chrome extension's id, fixed by the `key` in `extension/manifest.json`. */
 export const extensionId = "ehmpednijaggcbpmjldkdookepbjindc";
 
-/** The privacy policy, a page of its own beside the app (`src/routes/(policy)/privacy`). */
-export const privacyUrl = "/privacy";
+/** Support's email address. */
+export const supportEmail = "support@reader.hafa.cc";
 
-/** The terms of service, a page of its own beside the app (`src/routes/(policy)/terms`), like the privacy policy. */
-export const termsUrl = "/terms";
+/** Where the web pages are, for links to them from the app. */
+export const siteUrl = "https://reader.hafa.cc";
 
-/** How to reach support, a page of its own beside the app (`src/routes/(policy)/contact`), like the privacy policy. */
-export const contactUrl = "/contact";
+/** The issues on GitHub, where feedback goes. */
+export const feedbackUrl = "https://github.com/hafacc/reader/issues";
 
 /** The extension's Chrome Web Store listing page. */
 export const chromeWebStoreUrl =

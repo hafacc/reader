@@ -217,6 +217,28 @@ export const copy = {
   terms: "Terms",
   /** Link to the contact page. */
   contact: "Contact",
-  /** The sidebar entry that opens the contact page. */
+  /** The sidebar entry that opens the contact page, and that page's title. */
   contactUs: "Contact us",
+  /** Link to the issues on GitHub, for feedback. */
+  feedback: "Feedback",
+  /** The privacy policy's title in the app. */
+  privacyTitle: "Privacy policy",
+  /** The terms of service's title in the app. */
+  termsTitle: "Terms of service",
+  /** Link from a page in the app to the same page on the web. */
+  openOnWeb: "Open on the web",
+  /** The contact page's first line, before the email address. */
+  contactBody: "Questions, problems or requests about Reader? Write to us at:",
+  /** The contact page's feedback line, before the link to the issues on GitHub. */
+  contactFeedback: "Found a bug or have an idea? Share feedback",
+  /** The link to the issues on GitHub on the contact page. */
+  contactFeedbackLink: "on GitHub",
+  /** The contact page's line on deleting the account, before its link. */
+  contactDelete: "To delete your account, use the",
+  /** The link to the delete account page on the contact page. */
+  contactDeleteLink: "delete account page",
+  /** The contact page's line on what is stored, before the link to the privacy policy. */
+  contactPrivacy: "What Reader stores, and where, is in the",
+  /** The link to the privacy policy on the contact page. */
+  contactPrivacyLink: "privacy policy",
 };

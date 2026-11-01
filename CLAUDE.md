@@ -33,7 +33,8 @@ algorithm are in `PLAN.md`; read it before changing behavior.
 - User-facing wording lives in `web/src/lib/copy.ts`.
 - The phone web app and the Android app stay at parity: a behavior change to
   one goes to the other in the same pass.
-- The privacy policy and terms (`web/src/routes/(policy)/`) must stay true:
+- The privacy policy and terms (`shared/policy/`, shown by the web pages and
+  the Android app) must stay true:
   update them when what is fetched, stored or synced changes.
 - Lint treats warnings as errors everywhere (`bun lint`, Android lint and
   Kotlin).

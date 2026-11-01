@@ -3,7 +3,10 @@
   "compilerOptions": {
     "types": ["$app/types", "vite/client", "bun", "chrome"],
     "strict": true,
-    "paths": { "$shared/*": ["../shared/src/*"] },
+    "paths": {
+      "$shared/*": ["../shared/src/*"],
+      "$policy/*": ["../shared/policy/*"]
+    },
     "allowImportingTsExtensions": true
   },
   "include": ["src", "scripts", "tests", "*"]

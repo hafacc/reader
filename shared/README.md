@@ -16,6 +16,7 @@ ports it to Kotlin and reads `fixtures/` in its tests.
 | `src/check.ts` | one check of a feed and what it found |
 | `src/inbox.ts` | feeds the extension fetched, waiting for the web app |
 | `src/protocol.ts` | the messages between the web app and the extension |
+| `policy/` | the privacy policy and terms as HTML, shown by the web pages and the Android app |
 | `fixtures/` | feeds (`rss.xml`, `atom.xml`, `feed.json`) every client's parser must read |
 | `fixtures/schedule.json` | schedule cases with the numbers every client's schedule must produce |
 | `fixtures/parse.json` | feeds (`youtube.xml`, `atom-media.xml`) and the exact result every client's parser must give |
