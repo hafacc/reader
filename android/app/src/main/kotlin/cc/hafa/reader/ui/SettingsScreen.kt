@@ -32,6 +32,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.geometry.Offset
@@ -50,8 +51,10 @@ import cc.hafa.reader.core.Selection
 import cc.hafa.reader.core.Sort
 import cc.hafa.reader.core.byCount
 import cc.hafa.reader.core.knownWordCounts
-import cc.hafa.reader.core.sectionOff
-import cc.hafa.reader.core.topicOff
+import cc.hafa.reader.core.WordList
+import cc.hafa.reader.core.sectionState
+import cc.hafa.reader.core.topicState
+import cc.hafa.reader.core.wordMixed
 import cc.hafa.reader.core.wordCounts
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -74,22 +77,17 @@ fun SettingsScreen(snapshot: Snapshot, viewModel: ReaderViewModel) {
     var mode by remember { mutableStateOf(WordMode.Hide) }
     var draft by remember { mutableStateOf("") }
     var confirming by rememberConfirming()
-    val words = if (mode == WordMode.Hide) settings.hideWords else settings.onlyWords
+    val list = if (mode == WordMode.Hide) WordList.Hide else WordList.Only
+    val words = if (mode == WordMode.Hide) view.hideWords else view.onlyWords
     val entries = view.baseEntries
     val wordCounts by produceState(knownWordCounts(entries, words) ?: emptyMap(), entries, words) {
         value = withContext(Dispatchers.Default) { wordCounts(entries, words) }
     }
 
-    fun changeWords(next: List<String>) {
-        model.changeSettings { current ->
-            if (mode == WordMode.Hide) current.copy(hideWords = next) else current.copy(onlyWords = next)
-        }
-    }
-
     fun addWord() {
         val word = draft.trim()
         if (word.isNotEmpty() && words.none { known -> known.equals(word, ignoreCase = true) }) {
-            changeWords(words + word)
+            model.addWord(list, word)
         }
         draft = ""
     }
@@ -166,17 +164,23 @@ fun SettingsScreen(snapshot: Snapshot, viewModel: ReaderViewModel) {
                 if (words.isNotEmpty()) {
                     ChipRows(byCount(words) { word -> wordCounts[word] ?: 0 }) { word ->
                         val removeLabel = stringResource(R.string.remove_rule, word)
+                        val mixed = wordMixed(state.settings, view.filterFeedIds, list, word)
                         InputChip(
                             selected = false,
-                            onClick = { changeWords(words.filter { known -> known != word }) },
-                            label = { Text(word) },
+                            onClick = { model.removeWord(list, word) },
+                            label = { Text(word, color = if (mixed) colors.muted else colors.text) },
                             trailingIcon = {
                                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                                     Text((wordCounts[word] ?: 0).toString(), fontFamily = FontFamily.Monospace, fontSize = 12.sp, color = colors.muted)
                                     Icon(Icons.Outlined.Close, contentDescription = removeLabel, modifier = Modifier.size(InputChipDefaults.IconSize))
                                 }
                             },
-                            border = InputChipDefaults.inputChipBorder(enabled = true, selected = false, borderColor = colors.line),
+                            modifier = if (mixed) Modifier.dashedBorder(colors.muted, InputChipDefaults.shape) else Modifier,
+                            border = InputChipDefaults.inputChipBorder(
+                                enabled = true,
+                                selected = false,
+                                borderColor = if (mixed) Color.Transparent else colors.line,
+                            ),
                         )
                     }
                 }
@@ -188,14 +192,16 @@ fun SettingsScreen(snapshot: Snapshot, viewModel: ReaderViewModel) {
                     Text(stringResource(R.string.filters), fontSize = 14.sp, lineHeight = 20.sp, fontWeight = FontWeight.Medium)
                     FilterRows(
                         sections = filters.sections.map { section ->
-                            FilterChipItem(section.place, section.label, section.count, sectionOff(settings.offTopics, section.place)) {
-                                model.toggleSection(section.place, fromArticle = false)
+                            val ids = filters.feedsWithSection(section.place)
+                            FilterChipItem(section.place, section.label, section.count, sectionState(state.settings, ids, section.place)) {
+                                model.toggleSection(ids, section.place, fromArticle = false)
                             }
                         },
                         topics = filters.groupOrder.groups.map { group ->
                             group.map { item ->
-                                FilterChipItem(item.topic.trim().lowercase(), item.topic, item.count, topicOff(settings, item.topic)) {
-                                    model.toggleTopic(item.topic, fromArticle = false)
+                                val ids = filters.feedsWithTopic(item.topic)
+                                FilterChipItem(item.topic.trim().lowercase(), item.topic, item.count, topicState(state.settings, ids, item.topic)) {
+                                    model.toggleTopic(ids, item.topic, fromArticle = false)
                                 }
                             }
                         },

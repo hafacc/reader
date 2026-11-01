@@ -303,9 +303,18 @@ decides). Web with the extension closed gets nothing until a device opens.
 - **Per-view settings:** every feed, group, All items and Starred keeps one set of
   settings, the same panel everywhere, stored in the local database (`settings`
   store) and synced like entries. The panel opens where the article does,
-  and as a full page on a phone. It holds sort (Newest or Oldest), words and
-  filters (Starred has only the sort); the unread-only switch is in the list's
-  bar, not here. A feed's panel also has its group and Unsubscribe. The panel
+  and as a full page on a phone. It holds sort (Newest or Oldest), and in a
+  feed's panel its words and filters; the unread-only switch is in the list's
+  bar, not here. Words and filters belong only to feeds, so every view
+  shows a feed's articles alike: a group and All items list each feed's
+  articles as that feed's words and filters leave them. Their panels show
+  the words of all their feeds and the filters of all their articles; a
+  word in only some feeds' lists, or a chip off in only some of the feeds
+  whose articles carry it, is drawn dashed. Adding a word there adds it to
+  every feed in the view, removing one removes it from all; tapping a chip
+  turns it off in each of those feeds, or back on in all when it is off in
+  every one. Words and filters an older client stored for a group or All
+  items are deleted (the sort kept) on load and when they arrive by sync. A feed's panel also has its group and Unsubscribe. The panel
   also holds the reading font, which is one choice for the whole app (see below).
 - **Words and topics** (`shared/src/filter.ts`): type a word or phrase and press
   Enter; two buttons choose whether new words hide matching articles or, once any
@@ -322,15 +331,15 @@ decides). Web with the extension closed gets nothing until a device opens.
   the row that is shortest so far (the upper on a tie), so the rows are packed
   with no columns. Chips never move when toggled. On a phone each chip, and
   each word's remove button, takes taps 44 pixels tall (48 dp on Android)
-  around its smaller outline. A feed's own settings also apply in every group
-  and view it appears in.
+  around its smaller outline.
 - **Filters** (`shared/src/sections.ts`, `topicGroups` in `shared/src/filter.ts`,
   checked by `shared/fixtures/filters.json`): the panel's "Filters" area, and
   an open article's filter button, show rows of chips: the sections first
   (each led by a link icon), then one row per group of topics; each row is a
   single line that scrolls sideways, its ends fading where more chips lie. The
   panel's rows cover the view's articles with counts; an article's cover only
-  it, without counts.
+  it, without counts, and turn chips off in the article's own feed, in every
+  view.
   - *Topic groups:* categories are grouped by RSS `<category domain>` / Atom
     `<category scheme>`; no scheme (and JSON Feed tags) is the plain group, as
     is a scheme the view's articles use for only one distinct topic. A topic

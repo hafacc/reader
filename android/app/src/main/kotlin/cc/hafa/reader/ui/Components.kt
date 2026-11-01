@@ -64,7 +64,13 @@ import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.PathEffect
+import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.graphics.drawOutline
+import androidx.compose.ui.graphics.drawscope.Stroke
+import cc.hafa.reader.core.FilterState
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalLayoutDirection
@@ -393,11 +399,14 @@ fun ConfirmButton(label: String, confirmLabel: String, confirming: Boolean, onCl
  * when given. The one chip of the filter rows; Material keeps its touch area at least 48dp tall.
  */
 @Composable
-fun TopicChip(topic: String, off: Boolean, onToggle: () -> Unit, count: Int? = null, section: Boolean = false) {
+fun TopicChip(topic: String, state: FilterState, onToggle: () -> Unit, count: Int? = null, section: Boolean = false) {
     val colors = ReaderTheme.colors
+    val off = state == FilterState.Off
+    val mixed = state == FilterState.Mixed
     FilterChip(
         selected = !off,
         onClick = onToggle,
+        modifier = if (mixed) Modifier.dashedBorder(colors.muted, FilterChipDefaults.shape) else Modifier,
         leadingIcon = if (section) {
             { Icon(Icons.Outlined.Link, contentDescription = null, modifier = Modifier.size(14.dp), tint = colors.muted) }
         } else {
@@ -406,7 +415,7 @@ fun TopicChip(topic: String, off: Boolean, onToggle: () -> Unit, count: Int? = n
         label = {
             Text(
                 topic,
-                color = if (off) colors.read else colors.text,
+                color = if (off) colors.read else if (mixed) colors.muted else colors.text,
                 textDecoration = if (off) TextDecoration.LineThrough else TextDecoration.None,
             )
         },
@@ -418,10 +427,19 @@ fun TopicChip(topic: String, off: Boolean, onToggle: () -> Unit, count: Int? = n
             enabled = true,
             selected = !off,
             borderColor = colors.line,
-            selectedBorderColor = colors.line,
+            selectedBorderColor = if (mixed) Color.Transparent else colors.line,
         ),
     )
 }
+
+/** A dashed 1dp outline in [color] following [shape], for a chip set in only some feeds. */
+fun Modifier.dashedBorder(color: Color, shape: Shape): Modifier =
+    drawWithContent {
+        drawContent()
+        val width = 1.dp.toPx()
+        val outline = shape.createOutline(size, layoutDirection, this)
+        drawOutline(outline, color, style = Stroke(width = width, pathEffect = PathEffect.dashPathEffect(floatArrayOf(4.dp.toPx(), 3.dp.toPx()))))
+    }
 
 /** A row of choices of which exactly one is on, each at least 48dp tall. */
 @Composable

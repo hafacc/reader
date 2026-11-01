@@ -97,9 +97,9 @@ import cc.hafa.reader.core.ArticleFilters
 import cc.hafa.reader.core.Entry
 import cc.hafa.reader.core.ViewSettings
 import cc.hafa.reader.core.decodeHtmlEntities
-import cc.hafa.reader.core.sectionOff
+import cc.hafa.reader.core.sectionState
 import cc.hafa.reader.core.showsLeadImage
-import cc.hafa.reader.core.topicOff
+import cc.hafa.reader.core.topicState
 import coil3.SingletonImageLoader
 import coil3.request.ImageRequest
 import kotlinx.coroutines.Dispatchers
@@ -191,7 +191,7 @@ fun ArticleScreen(snapshot: Snapshot, viewModel: ReaderViewModel, leaving: Boole
                     Spacer(Modifier.weight(1f))
                     if (entry != null) {
                         if (filters != null && !filters.isEmpty) {
-                            FilterButton(off = filters.anyOff(view.viewSettings), open = filtersOpen) { filtersOpen = true }
+                            FilterButton(off = filters.anyOff(state.settings), open = filtersOpen) { filtersOpen = true }
                         }
                         ArticleBarActions(entry, state.shownRead(entry), viewModel)
                     }
@@ -219,7 +219,7 @@ fun ArticleScreen(snapshot: Snapshot, viewModel: ReaderViewModel, leaving: Boole
         }
     }
     if (filtersOpen && filters != null && !filters.isEmpty) {
-        FilterSheet(filters, view.viewSettings, viewModel) { filtersOpen = false }
+        FilterSheet(filters, state.settings, viewModel) { filtersOpen = false }
     }
 }
 
@@ -249,7 +249,8 @@ private fun FilterButton(off: Boolean, open: Boolean, onClick: () -> Unit) {
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun FilterSheet(filters: ArticleFilters, settings: ViewSettings, viewModel: ReaderViewModel, onDismiss: () -> Unit) {
+private fun FilterSheet(filters: ArticleFilters, settings: Map<String, ViewSettings>, viewModel: ReaderViewModel, onDismiss: () -> Unit) {
+    val ids = listOf(filters.feedId)
     val colors = ReaderTheme.colors
     val model = viewModel.model
     ModalBottomSheet(
@@ -269,14 +270,14 @@ private fun FilterSheet(filters: ArticleFilters, settings: ViewSettings, viewMod
             Column(Modifier.verticalScroll(rememberScrollState())) {
                 FilterRows(
                     sections = filters.sections.map { section ->
-                        FilterChipItem(section.place, section.label, null, sectionOff(settings.offTopics, section.place)) {
-                            model.toggleSection(section.place, fromArticle = true)
+                        FilterChipItem(section.place, section.label, null, sectionState(settings, ids, section.place)) {
+                            model.toggleSection(ids, section.place, fromArticle = true)
                         }
                     },
                     topics = filters.topics.map { row ->
                         row.map { topic ->
-                            FilterChipItem(topic.trim().lowercase(), topic, null, topicOff(settings, topic)) {
-                                model.toggleTopic(topic, fromArticle = true)
+                            FilterChipItem(topic.trim().lowercase(), topic, null, topicState(settings, ids, topic)) {
+                                model.toggleTopic(ids, topic, fromArticle = true)
                             }
                         }
                     },

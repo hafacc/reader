@@ -221,6 +221,24 @@ function byUnread(
   );
 }
 
+/** Whether a filter is on, off, or off in only some of the feeds it covers. */
+export type FilterState = "on" | "off" | "mixed";
+
+/** Which of a feed's word lists. */
+export type WordList = "hideWords" | "onlyWords";
+
+/** Whether a filter is on, off or mixed, given whether each feed has it off. */
+function filterState(offs: readonly boolean[]): FilterState {
+  const offCount = offs.filter(Boolean).length;
+  let state: FilterState = "mixed";
+  if (offCount === 0) {
+    state = "on";
+  } else if (offCount === offs.length) {
+    state = "off";
+  }
+  return state;
+}
+
 /** A test of whether an entry stays; built from a view's settings once for many entries. */
 type Keeper = (entry: Entry) => boolean;
 
@@ -396,6 +414,8 @@ function sectionsByEntry(
 
 /** An open article's filters: its section chips, then its topics in one row per group. */
 export interface ArticleFilters {
+  /** Id of its feed, whose settings the chips change. */
+  feedId: string;
   /** Its sections, outermost first. */
   sections: SectionChip[];
   /** Its topics, one row per group of the view. */
@@ -543,7 +563,7 @@ export class Reader {
   /** Whether the loading screen holds the person: nothing behind it takes taps or keys. */
   gateBlocks = $derived(this.gate.phase !== "open");
 
-  /** Whether the current view has words and topics; Starred shows every starred article and has only a sort. */
+  /** Whether the current view's articles have filters; Starred shows every starred article. */
   filtersApply = $derived(this.selection.kind !== "starred");
 
   /** Settings of the current view. */
@@ -650,11 +670,54 @@ export class Reader {
   /** Where each topic sits in `topicGroups`, for ordering an article's topics. */
   private readonly groupOrder = $derived(groupOrder(this.topicGroups));
 
+  /** Feeds whose words and filters the current view's settings show and change; none in Starred. */
+  filterFeedIds = $derived.by(() => {
+    let ids: string[] = [];
+    if (this.selection.kind === "all") {
+      ids = this.feeds.map((feed) => feed.id);
+    } else if (this.selection.kind !== "starred") {
+      ids = this.viewFeedIds;
+    }
+    return ids;
+  });
+
+  /** The words of the current view's feeds that hide articles, each once whatever its capitals. */
+  hideWords = $derived(this.wordsOf("hideWords"));
+
+  /** The words of the current view's feeds that keep only matching articles, each once whatever its capitals. */
+  onlyWords = $derived(this.wordsOf("onlyWords"));
+
+  /** Feeds by each topic, lower-cased, that the current view's articles carry. */
+  private readonly topicFeeds = $derived.by(() => {
+    const feeds = new Map<string, Set<string>>();
+    for (const entry of this.countedArticles) {
+      for (const topic of entry.categories) {
+        const key = topic.toLowerCase();
+        const known = feeds.get(key) ?? new Set<string>();
+        known.add(entry.feedId);
+        feeds.set(key, known);
+      }
+    }
+    return feeds;
+  });
+
+  /** Feeds by each section place that the current view's articles fall in. */
+  private readonly sectionFeeds = $derived.by(() => {
+    const feeds = new Map<string, Set<string>>();
+    for (const entry of this.countedArticles) {
+      for (const { place } of this.articleSections.get(entry.id) ?? []) {
+        const known = feeds.get(place) ?? new Set<string>();
+        known.add(entry.feedId);
+        feeds.set(place, known);
+      }
+    }
+    return feeds;
+  });
+
   /** How many of the current view's articles have each of its words in the title or summary. */
   wordCounts = $derived.by(() => {
-    const { hideWords, onlyWords } = this.viewSettings;
     const counts = new Map<string, number>();
-    for (const word of [...hideWords, ...onlyWords]) {
+    for (const word of [...this.hideWords, ...this.onlyWords]) {
       counts.set(
         word,
         this.countedArticles.filter((entry) => hasWord([word], entry)).length,
@@ -723,17 +786,10 @@ export class Reader {
     return keepers;
   });
 
-  /** The open view's own filter as the list uses it; none for a feed, whose own settings apply. */
-  private readonly viewKeeper = $derived(
-    this.selection.kind === "feed"
-      ? undefined
-      : keeper(this.holding(viewKey(this.selection), this.viewSettings)),
-  );
-
   /**
-   * Unread entries the lists would show: per feed those its own words and
-   * topics keep, per group and in All items those that view's keep as well.
-   * Worked out again only when entries, feeds or settings change.
+   * Unread entries the lists would show: those each feed's own words and
+   * topics keep, in the feed, its group and All items alike. Worked out again
+   * only when entries, feeds or settings change.
    */
   unreadCounts = $derived.by(() => {
     const byFeed = new Map<string, number>();
@@ -741,17 +797,14 @@ export class Reader {
     let total = 0;
     const folderOf = new Map(this.feeds.map((feed) => [feed.id, feed.folder]));
     const keepers = this.savedKeepers;
-    const allKeeper = keepers.get("all");
     for (const entry of this.entries) {
       if (!entry.read && keptBy(keepers.get(`feed:${entry.feedId}`), entry)) {
         byFeed.set(entry.feedId, (byFeed.get(entry.feedId) ?? 0) + 1);
         const folder = folderOf.get(entry.feedId) ?? "";
-        if (folder !== "" && keptBy(keepers.get(`folder:${folder}`), entry)) {
+        if (folder !== "") {
           byFolder.set(folder, (byFolder.get(folder) ?? 0) + 1);
         }
-        if (keptBy(allKeeper, entry)) {
-          total += 1;
-        }
+        total += 1;
       }
     }
     return { byFeed, byFolder, total };
@@ -988,6 +1041,7 @@ export class Reader {
         ]),
       );
       this.tombstones = await this.db.loadTombstones();
+      await this.clearViewFilters();
       await this.markHttpFeeds();
     } catch {
       this.db = undefined;
@@ -1339,9 +1393,16 @@ export class Reader {
 
   /** Change the current view's settings and save them. */
   async changeSettings(change: Partial<ViewSettings>): Promise<void> {
-    const key = viewKey(this.selection);
+    await this.changeSettingsOf(viewKey(this.selection), change);
+  }
+
+  /** Change one view's settings and save them. */
+  private async changeSettingsOf(
+    key: string,
+    change: Partial<ViewSettings>,
+  ): Promise<void> {
     const next: SavedSettings = {
-      ...this.viewSettings,
+      ...(this.settings[key] ?? DEFAULT_SETTINGS),
       ...change,
       updatedAt: Date.now(),
     };
@@ -1351,76 +1412,175 @@ export class Reader {
     this.sync.queue({ settings: new Map([[key, next]]) });
   }
 
-  /** Whether the current view has a topic turned off. */
-  topicOff(topic: string): boolean {
-    const key = topic.toLowerCase();
-    return this.viewSettings.offTopics.some(
-      (known) => known.toLowerCase() === key,
+  /** Feeds in the current view whose articles carry a topic. */
+  feedsWithTopic(topic: string): string[] {
+    return [...(this.topicFeeds.get(topic.toLowerCase()) ?? [])];
+  }
+
+  /** Feeds in the current view whose articles fall in a section. */
+  feedsWithSection(place: string): string[] {
+    return [...(this.sectionFeeds.get(place) ?? [])];
+  }
+
+  /** Whether a topic is on, off or off in only some of the given feeds. */
+  topicState(ids: readonly string[], topic: string): FilterState {
+    return filterState(ids.map((id) => this.topicOff(id, topic)));
+  }
+
+  /** Whether a section is on, off or off in only some of the given feeds. */
+  sectionState(ids: readonly string[], place: string): FilterState {
+    return filterState(ids.map((id) => this.sectionOff(id, place)));
+  }
+
+  /** Whether a word is in every one of the current view's feeds' list, or only some. */
+  wordMixed(list: WordList, word: string): boolean {
+    const lower = word.toLowerCase();
+    return !this.filterFeedIds.every((id) =>
+      this.wordsOfFeed(id, list).some((known) => known.toLowerCase() === lower),
     );
   }
 
-  /** Whether the current view has a section, or one above it, turned off. */
-  sectionOff(place: string): boolean {
-    return sectionOff(this.viewSettings.offTopics, place);
+  /** Add a word to each of the current view's feeds that lacks it. */
+  async addWord(list: WordList, word: string): Promise<void> {
+    const lower = word.toLowerCase();
+    for (const id of this.filterFeedIds) {
+      const words = this.wordsOfFeed(id, list);
+      if (!words.some((known) => known.toLowerCase() === lower)) {
+        // biome-ignore lint/performance/noAwaitInLoops: feeds are few
+        await this.changeSettingsOf(`feed:${id}`, { [list]: [...words, word] });
+      }
+    }
+  }
+
+  /** Remove a word from each of the current view's feeds that has it. */
+  async removeWord(list: WordList, word: string): Promise<void> {
+    const lower = word.toLowerCase();
+    for (const id of this.filterFeedIds) {
+      const words = this.wordsOfFeed(id, list);
+      const kept = words.filter((known) => known.toLowerCase() !== lower);
+      if (kept.length !== words.length) {
+        // biome-ignore lint/performance/noAwaitInLoops: feeds are few
+        await this.changeSettingsOf(`feed:${id}`, { [list]: kept });
+      }
+    }
+  }
+
+  private wordsOfFeed(id: string, list: WordList): string[] {
+    return (this.settings[`feed:${id}`] ?? DEFAULT_SETTINGS)[list];
+  }
+
+  private wordsOf(list: WordList): string[] {
+    const words = new Map<string, string>();
+    for (const id of this.filterFeedIds) {
+      for (const word of this.wordsOfFeed(id, list)) {
+        if (!words.has(word.toLowerCase())) {
+          words.set(word.toLowerCase(), word);
+        }
+      }
+    }
+    return [...words.values()];
+  }
+
+  /** Whether a feed has a topic turned off. */
+  private topicOff(id: string, topic: string): boolean {
+    const key = topic.toLowerCase();
+    return this.offTopicsOf(id).some((known) => known.toLowerCase() === key);
+  }
+
+  /** Whether a feed has a section, or one above it, turned off. */
+  private sectionOff(id: string, place: string): boolean {
+    return sectionOff(this.offTopicsOf(id), place);
+  }
+
+  private offTopicsOf(id: string): string[] {
+    return (this.settings[`feed:${id}`] ?? DEFAULT_SETTINGS).offTopics;
   }
 
   /** An article's sections and topics as the filter rows show them; empty in Starred. */
   articleFilters(entry: Entry): ArticleFilters {
     return this.filtersApply
       ? {
+          feedId: entry.feedId,
           sections: this.articleSections.get(entry.id) ?? [],
           topics: articleTopicGroups(entry.categories, this.groupOrder),
         }
-      : { sections: [], topics: [] };
+      : { feedId: entry.feedId, sections: [], topics: [] };
   }
 
-  /** Whether any of an article's sections or topics is turned off in the current view. */
+  /** Whether any of an article's sections or topics is turned off in its feed. */
   filtersOff(filters: ArticleFilters): boolean {
+    const { feedId: id } = filters;
     return (
-      filters.sections.some(({ place }) => this.sectionOff(place)) ||
-      filters.topics.some((row) => row.some((topic) => this.topicOff(topic)))
+      filters.sections.some(({ place }) => this.sectionOff(id, place)) ||
+      filters.topics.some((row) =>
+        row.some((topic) => this.topicOff(id, topic)),
+      )
     );
   }
 
   /**
-   * Turn a topic off or back on in the current view. From an article the list
-   * keeps its rows until the next refresh or view change; from the settings
-   * panel everything takes effect at once.
+   * Turn a topic off in the given feeds, or back on when it is off in all of
+   * them, in every view they appear in. From an article the list keeps its
+   * rows until the next refresh or view change; from the settings panel
+   * everything takes effect at once.
    */
-  async toggleTopic(topic: string, fromArticle: boolean): Promise<void> {
-    const wasOff = this.topicOff(topic);
+  async toggleTopic(
+    ids: readonly string[],
+    topic: string,
+    fromArticle: boolean,
+  ): Promise<void> {
+    const turnOff = this.topicState(ids, topic) !== "off";
     const lower = topic.toLowerCase();
-    const offTopics = wasOff
-      ? this.viewSettings.offTopics.filter(
-          (known) => known.toLowerCase() !== lower,
-        )
-      : [...this.viewSettings.offTopics, topic];
-    await this.changeOffTopics(offTopics, fromArticle);
+    for (const id of ids) {
+      if (this.topicOff(id, topic) !== turnOff) {
+        const offTopics = this.offTopicsOf(id);
+        // biome-ignore lint/performance/noAwaitInLoops: feeds are few
+        await this.changeOffTopics(
+          id,
+          turnOff
+            ? [...offTopics, topic]
+            : offTopics.filter((known) => known.toLowerCase() !== lower),
+          fromArticle,
+        );
+      }
+    }
   }
 
   /**
-   * Turn a section off, with every section under it, or back on, with every
-   * section above it, in the current view; from an article the list holds
-   * as it does for a topic.
+   * Turn a section off in the given feeds, with every section under it, or
+   * back on with every section above it when it is off in all of them; from
+   * an article the list holds as it does for a topic.
    */
-  async toggleSection(place: string, fromArticle: boolean): Promise<void> {
-    await this.changeOffTopics(
-      toggledSection(this.viewSettings.offTopics, place),
-      fromArticle,
-    );
+  async toggleSection(
+    ids: readonly string[],
+    place: string,
+    fromArticle: boolean,
+  ): Promise<void> {
+    const turnOff = this.sectionState(ids, place) !== "off";
+    for (const id of ids) {
+      if (this.sectionOff(id, place) !== turnOff) {
+        // biome-ignore lint/performance/noAwaitInLoops: feeds are few
+        await this.changeOffTopics(
+          id,
+          toggledSection(this.offTopicsOf(id), place),
+          fromArticle,
+        );
+      }
+    }
   }
 
   private async changeOffTopics(
+    id: string,
     offTopics: string[],
     fromArticle: boolean,
   ): Promise<void> {
-    const key = viewKey(this.selection);
+    const key = `feed:${id}`;
     if (fromArticle) {
-      this.heldTopics[key] ??= [...this.viewSettings.offTopics];
+      this.heldTopics[key] ??= [...this.offTopicsOf(id)];
     } else {
       this.heldTopics = {};
     }
-    await this.changeSettings({ offTopics });
+    await this.changeSettingsOf(key, { offTopics });
   }
 
   /** How many articles in the current view have one of its words in the title or summary. */
@@ -1770,13 +1930,9 @@ export class Reader {
   private countedTest(): Keeper {
     const { selection } = this;
     const keepers = this.savedKeepers;
-    const view =
-      selection.kind === "feed" ? undefined : keepers.get(viewKey(selection));
     return selection.kind === "starred"
       ? (): boolean => true
-      : (entry): boolean =>
-          keptBy(keepers.get(`feed:${entry.feedId}`), entry) &&
-          keptBy(view, entry);
+      : (entry): boolean => keptBy(keepers.get(`feed:${entry.feedId}`), entry);
   }
 
   /** Remove a feed and everything stored for it. */
@@ -1858,6 +2014,7 @@ export class Reader {
       await this.remember(new Map([[`${SETTINGS_TOMBSTONE}${key}`, when]]));
     }
     await this.forget(forgotten);
+    await this.clearViewFilters();
     arrived();
     if (change.feeds.length > 0) {
       await this.markHttpFeeds();
@@ -1955,20 +2112,37 @@ export class Reader {
     }
   }
 
+  /** Delete the words and filters older versions stored for a group or All items, which only feeds have now. */
+  private async clearViewFilters(): Promise<void> {
+    for (const [key, saved] of Object.entries(this.settings)) {
+      if (
+        !key.startsWith("feed:") &&
+        saved.hideWords.length +
+          saved.onlyWords.length +
+          saved.offTopics.length >
+          0
+      ) {
+        // biome-ignore lint/performance/noAwaitInLoops: settings are few
+        await this.changeSettingsOf(key, {
+          hideWords: [],
+          onlyWords: [],
+          offTopics: [],
+        });
+      }
+    }
+  }
+
   private holding(key: string, settings: ViewSettings): ViewSettings {
     const held = this.heldTopics[key];
     return held === undefined ? settings : { ...settings, offTopics: held };
   }
 
-  /** A test of whether the open view's words and topics keep an entry; Starred keeps every one. */
+  /** A test of whether each feed's words and topics, as the list uses them, keep an entry; Starred keeps every one. */
   private keepsTest(): Keeper {
     const owns = this.heldKeepers;
-    const view = this.viewKeeper;
     return this.selection.kind === "starred"
       ? (): boolean => true
-      : (entry): boolean =>
-          keptBy(owns.get(`feed:${entry.feedId}`), entry) &&
-          keptBy(view, entry);
+      : (entry): boolean => keptBy(owns.get(`feed:${entry.feedId}`), entry);
   }
 
   private valid(selection: Selection): boolean {

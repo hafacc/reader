@@ -401,7 +401,7 @@ describe("loading", () => {
     await reader["applyRemote"]({
       ...emptyChange(),
       entries: [article("b", { feedId: "comics", published: 2 })],
-      settings: new Map([["all", settings({ hideWords: ["rust"] })]]),
+      settings: new Map([["feed:tech", settings({ hideWords: ["rust"] })]]),
     });
     expect(reader.visible.map((entry) => entry.id)).toEqual(["a"]);
     finish();
@@ -435,7 +435,7 @@ describe("loading", () => {
 });
 
 describe("unread counts", () => {
-  test("count only what each list would show", () => {
+  test("count only what each feed's filters keep, in its group and All items too", () => {
     const reader = makeReader([
       article("a", { feedId: "tech", title: "Rust release" }),
       article("b", { feedId: "tech", title: "Crypto news" }),
@@ -446,14 +446,17 @@ describe("unread counts", () => {
     reader.settings = {
       "feed:tech": settings({ hideWords: ["crypto"] }),
       "folder:News": settings({ hideWords: ["markets"] }),
+      all: settings({ hideWords: ["rust"] }),
       "feed:comics": settings({ offTopics: ["spoilers"] }),
     };
     expect(reader.unreadByFeed.get("tech")).toBe(1);
     expect(reader.unreadByFeed.get("world")).toBe(1);
     expect(reader.unreadByFeed.get("comics")).toBeUndefined();
     const group = reader.tree.find((item) => item.kind === "folder");
-    expect(group?.unread).toBe(1);
+    expect(group?.unread).toBe(2);
     expect(reader.unreadTotal).toBe(2);
+    reader.select({ kind: "folder", name: "News" });
+    expect(reader.visible.map((entry) => entry.id).sort()).toEqual(["a", "c"]);
   });
 
   test("a feed whose unread articles are all hidden is not listed", () => {
@@ -745,8 +748,8 @@ describe("topics", () => {
     ]);
     reader.feeds = [...reader.feeds, sampleFeed()];
     reader.select({ kind: "feed", id: "feed-1" });
-    await reader.toggleTopic("Rust", true);
-    expect(reader.topicOff("rust")).toBe(true);
+    await reader.toggleTopic(["feed-1"], "Rust", true);
+    expect(reader.topicState(["feed-1"], "rust")).toBe("off");
     expect(reader.visible.map((entry) => entry.id).sort()).toEqual(["a", "b"]);
     reader.select({ kind: "all" });
     reader.select({ kind: "feed", id: "feed-1" });
@@ -761,6 +764,7 @@ describe("topics", () => {
       article("d", { url: "https://www.example.com/world/d.html" }),
       article("e", { url: "https://www.example.com/world/e.html" }),
     ]);
+    reader.feeds = [...reader.feeds, sampleFeed()];
     reader.select({ kind: "feed", id: "feed-1" });
     expect(reader.sections.map(({ label, count }) => [label, count])).toEqual([
       ["us", 3],
@@ -773,12 +777,14 @@ describe("topics", () => {
       "example.com/us",
       "example.com/us/politics",
     ]);
-    await reader.toggleSection("example.com/us", false);
+    await reader.toggleSection(["feed-1"], "example.com/us", false);
     expect(reader.viewSettings.offTopics).toEqual(["section:example.com/us"]);
-    expect(reader.sectionOff("example.com/us/politics")).toBe(true);
+    expect(reader.sectionState(["feed-1"], "example.com/us/politics")).toBe(
+      "off",
+    );
     expect(filters && reader.filtersOff(filters)).toBe(true);
     expect(reader.visible.map((entry) => entry.id).sort()).toEqual(["d", "e"]);
-    await reader.toggleSection("example.com/us/politics", false);
+    await reader.toggleSection(["feed-1"], "example.com/us/politics", false);
     expect(reader.viewSettings.offTopics).toEqual([]);
   });
 
@@ -787,6 +793,7 @@ describe("topics", () => {
     reader.select({ kind: "starred" });
     const [open] = reader.entries;
     expect(open && reader.articleFilters(open)).toEqual({
+      feedId: "feed-1",
       sections: [],
       topics: [],
     });
@@ -797,7 +804,21 @@ describe("topics", () => {
       article("a", { categories: ["Rust"] }),
       article("b", { categories: ["Go"] }),
     ]);
-    await reader.toggleTopic("Rust", false);
+    reader.feeds = [...reader.feeds, sampleFeed()];
+    reader.select({ kind: "feed", id: "feed-1" });
+    await reader.toggleTopic(["feed-1"], "Rust", false);
+    expect(reader.visible.map((entry) => entry.id)).toEqual(["b"]);
+  });
+
+  test("a topic turned off from an article in All items is turned off in its feed", async () => {
+    const reader = makeReader([
+      article("a", { feedId: "tech", categories: ["Rust"] }),
+      article("b", { feedId: "world", categories: ["Rust"] }),
+    ]);
+    reader.select({ kind: "all" });
+    await reader.toggleTopic(["tech"], "Rust", false);
+    expect(reader.settings["feed:tech"]?.offTopics).toEqual(["Rust"]);
+    expect(reader.settings.all).toBeUndefined();
     expect(reader.visible.map((entry) => entry.id)).toEqual(["b"]);
   });
 });
@@ -816,14 +837,60 @@ test("an OPML import keeps titles but lets the feed's own title take over", asyn
 });
 
 describe("more counts and views", () => {
-  test("All items' own words lower the All count", () => {
+  test("mark all as read in All items marks what every feed's filters leave", async () => {
     const reader = makeReader([
       article("a", { feedId: "tech", title: "Rust" }),
       article("b", { feedId: "comics", title: "Sponsored post" }),
     ]);
-    reader.settings = { all: settings({ hideWords: ["sponsored"] }) };
+    reader.settings = { "feed:comics": settings({ hideWords: ["sponsored"] }) };
+    reader.select({ kind: "all" });
     expect(reader.unreadTotal).toBe(1);
-    expect(reader.unreadByFeed.get("comics")).toBe(1);
+    await reader.markAllRead();
+    expect(reader.entries.map((entry) => entry.read)).toEqual([true, false]);
+    reader.select({ kind: "feed", id: "comics" });
+    expect(reader.visible).toEqual([]);
+  });
+
+  test("a group's settings show its feeds' words and topics, mixed where they differ", async () => {
+    const reader = makeReader([
+      article("a", { feedId: "tech", categories: ["Rust"] }),
+      article("b", { feedId: "world", categories: ["Rust"] }),
+    ]);
+    reader.settings = {
+      "feed:tech": settings({ hideWords: ["crypto"], offTopics: ["rust"] }),
+    };
+    reader.select({ kind: "folder", name: "News" });
+    expect(reader.hideWords).toEqual(["crypto"]);
+    expect(reader.wordMixed("hideWords", "crypto")).toBe(true);
+    const rust = reader.feedsWithTopic("Rust");
+    expect(new Set(rust)).toEqual(new Set(["tech", "world"]));
+    expect(reader.topicState(rust, "Rust")).toBe("mixed");
+    await reader.toggleTopic(rust, "Rust", false);
+    expect(reader.topicState(rust, "Rust")).toBe("off");
+    await reader.toggleTopic(rust, "Rust", false);
+    expect(reader.topicState(rust, "Rust")).toBe("on");
+    await reader.addWord("hideWords", "Crypto");
+    expect(reader.wordMixed("hideWords", "crypto")).toBe(false);
+    expect(reader.settings["feed:tech"]?.hideWords).toEqual(["crypto"]);
+    expect(reader.settings["feed:world"]?.hideWords).toEqual(["Crypto"]);
+    await reader.removeWord("hideWords", "crypto");
+    expect(reader.hideWords).toEqual([]);
+    expect(reader.settings["folder:News"]).toBeUndefined();
+  });
+
+  test("words and filters a group or All items had are deleted, and the sort kept", async () => {
+    const reader = makeReader([]);
+    await reader["applyRemote"]({
+      ...emptyChange(),
+      settings: new Map([
+        ["folder:News", settings({ sort: "oldest", offTopics: ["rust"] })],
+        ["feed:tech", settings({ hideWords: ["crypto"] })],
+      ]),
+    });
+    const group = reader.settings["folder:News"];
+    expect(group?.sort).toBe("oldest");
+    expect(group?.offTopics).toEqual([]);
+    expect(reader.settings["feed:tech"]?.hideWords).toEqual(["crypto"]);
   });
 
   test("Starred counts and marks every starred article, whatever the filters", async () => {
