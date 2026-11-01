@@ -8,7 +8,7 @@
 
 <header class="border-line border-b px-6 py-4">
   <a
-    class="flex w-fit items-center gap-2 font-semibold text-ink tracking-tight no-underline"
+    class="text-ink flex w-fit items-center gap-2 font-semibold tracking-tight no-underline"
     href={resolve("/")}
   >
     <img class="size-7" src={asset("icon.svg")} alt="">

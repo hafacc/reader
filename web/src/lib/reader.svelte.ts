@@ -1022,7 +1022,10 @@ export class Reader {
 
   /** Folder names in use, sorted. */
   folders = $derived(
-    [...new Set(this.feeds.map((feed) => feed.folder).filter(Boolean))].sort(),
+    [...new Set(this.feeds.map((feed) => feed.folder).filter(Boolean))].sort(
+      // Code-unit order, as Android's `sorted()` gives.
+      (first, second) => Number(first > second) - Number(first < second),
+    ),
   );
 
   /** Open the database, show what is stored, then pull anything new. */

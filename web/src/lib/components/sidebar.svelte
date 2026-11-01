@@ -212,7 +212,7 @@
     {/if}
   </div>
   <div
-    class="flex min-h-0 flex-1 flex-col gap-0.5 overflow-y-auto overflow-x-hidden"
+    class="flex min-h-0 flex-1 flex-col gap-0.5 overflow-x-hidden overflow-y-auto"
   >
     {@render row(copy.allItems, reader.unreadTotal, { kind: "all" }, "all")}
     {@render row(copy.starred, starredCount, { kind: "starred" }, "starred")}
@@ -251,7 +251,7 @@
 
   <button
     type="button"
-    class="mt-2 flex h-9 shrink-0 items-center gap-2.5 whitespace-nowrap rounded-lg px-2.5 text-sm text-muted hover:bg-panel"
+    class="text-muted hover:bg-panel mt-2 flex h-9 shrink-0 items-center gap-2.5 rounded-lg px-2.5 text-sm whitespace-nowrap"
     title={copy.contactUs}
     onclick={oncontact}
   >
@@ -265,7 +265,7 @@
     href={feedbackUrl}
     target="_blank"
     rel="noopener noreferrer"
-    class="flex h-9 shrink-0 items-center gap-2.5 whitespace-nowrap rounded-lg px-2.5 text-sm text-muted hover:bg-panel"
+    class="text-muted hover:bg-panel flex h-9 shrink-0 items-center gap-2.5 rounded-lg px-2.5 text-sm whitespace-nowrap"
     title={copy.feedback}
   >
     <span class="flex size-5 shrink-0 items-center justify-center"
@@ -276,7 +276,7 @@
 
   <button
     type="button"
-    class="flex h-9 shrink-0 items-center gap-2.5 whitespace-nowrap rounded-lg px-2.5 text-sm text-muted hover:bg-panel"
+    class="text-muted hover:bg-panel flex h-9 shrink-0 items-center gap-2.5 rounded-lg px-2.5 text-sm whitespace-nowrap"
     onclick={syncClicked}
     onpointerenter={preloadSync}
     onfocus={preloadSync}
@@ -298,7 +298,7 @@
 
   <button
     type="button"
-    class="mt-2 flex h-9 shrink-0 items-center gap-2.5 whitespace-nowrap rounded-lg border border-line px-2.5 text-sm text-muted hover:bg-panel"
+    class="border-line text-muted hover:bg-panel mt-2 flex h-9 shrink-0 items-center gap-2.5 rounded-lg border px-2.5 text-sm whitespace-nowrap"
     onclick={onadd}
     title={copy.addFeed}
   >

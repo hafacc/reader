@@ -462,12 +462,12 @@
         <div class="grid min-h-0 flex-1 place-items-center overflow-y-auto">
           {#if emptyShows === "syncing"}
             <p
-              class="flex items-center gap-2 p-6 text-sm text-muted"
+              class="text-muted flex items-center gap-2 p-6 text-sm"
               aria-live="polite"
             >
               <SyncStatus
                 status={reader.sync.status}
-                class="size-4 text-accent"
+                class="text-accent size-4"
               />
               {reader.sync.statusText}
             </p>
@@ -477,12 +477,12 @@
                 {#snippet signIn()}
                   {#if !reader.sync.signedIn}
                     <div
-                      class="flex flex-col gap-3 rounded-xl bg-accent-soft p-4"
+                      class="bg-accent-soft flex flex-col gap-3 rounded-xl p-4"
                     >
                       <p class="font-semibold">{copy.firstRunSignInLine}</p>
                       <button
                         type="button"
-                        class="flex min-h-11 items-center justify-center gap-2 rounded-lg border border-accent bg-page px-3 py-2 text-sm font-semibold text-accent hover:bg-side"
+                        class="border-accent bg-page text-accent hover:bg-side flex min-h-11 items-center justify-center gap-2 rounded-lg border px-3 py-2 text-sm font-semibold"
                         onpointerenter={preloadSignIn}
                         onfocus={preloadSignIn}
                         onclick={() => logFailure(signInFromEmpty())}
@@ -496,7 +496,7 @@
               </AddFeed>
               <button
                 type="button"
-                class="mb-6 text-sm text-muted underline hover:text-ink"
+                class="text-muted hover:text-ink mb-6 text-sm underline"
                 onclick={() => showInfo("contact")}
               >
                 {copy.contactUs}
@@ -559,7 +559,7 @@
         transition:fade={{ duration: 150 }}
       ></button>
       <div
-        class="absolute inset-y-0 left-0 w-[85%] max-w-xs bg-side pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)] pl-[env(safe-area-inset-left)] shadow-xl"
+        class="bg-side absolute inset-y-0 left-0 w-[85%] max-w-xs pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)] pl-[env(safe-area-inset-left)] shadow-xl"
         transition:fly={{ x: -320, duration: 200 }}
       >
         <Sidebar
@@ -581,7 +581,7 @@
 {#if platform !== "ios" && reader.gateBlocks}
   <!-- opaque, so nothing half loaded shows; the logo appears only once loading is slow -->
   <div
-    class="fixed inset-0 z-35 grid place-items-center bg-page"
+    class="bg-page fixed inset-0 z-35 grid place-items-center"
     aria-busy="true"
     out:fade={{ duration: 150 }}
   >
@@ -593,12 +593,12 @@
 
 <!-- mounted even when empty, so screen readers hear each notice as it appears -->
 <div
-  class="pointer-events-none fixed inset-x-0 bottom-[calc(env(safe-area-inset-bottom)+5rem)] md:bottom-[calc(env(safe-area-inset-bottom)+1rem)] z-40 flex justify-center px-4"
+  class="pointer-events-none fixed inset-x-0 bottom-[calc(env(safe-area-inset-bottom)+5rem)] z-40 flex justify-center px-4 md:bottom-[calc(env(safe-area-inset-bottom)+1rem)]"
   role="status"
 >
   {#if reader.notice}
     <p
-      class="pointer-events-auto max-w-md rounded-lg bg-ink px-4 py-3 text-sm text-page shadow-lg"
+      class="bg-ink text-page pointer-events-auto max-w-md rounded-lg px-4 py-3 text-sm shadow-lg"
       transition:fly={{ y: 16, duration: 150 }}
     >
       {reader.notice}

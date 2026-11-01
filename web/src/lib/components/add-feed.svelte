@@ -204,7 +204,7 @@
   {#if first}
     <div class="flex flex-col gap-2">
       <h2 class="font-reading text-2xl font-bold">{copy.emptyTitle}</h2>
-      <p class="text-sm text-muted">{copy.emptyBody}</p>
+      <p class="text-muted text-sm">{copy.emptyBody}</p>
     </div>
   {/if}
   {@render signIn?.()}
@@ -217,7 +217,7 @@
           ? "border-danger"
           : "border-line"}"
       >
-        <Search class="size-4 shrink-0 text-muted" />
+        <Search class="text-muted size-4 shrink-0" />
         <input
           id="feed-query"
           class="min-w-0 flex-1 bg-transparent outline-none"
@@ -233,7 +233,7 @@
           aria-describedby="feed-query-note"
         >
         {#if fieldError}
-          <CircleAlert class="size-4 shrink-0 text-danger" aria-hidden="true" />
+          <CircleAlert class="text-danger size-4 shrink-0" aria-hidden="true" />
         {/if}
       </span>
     </label>
@@ -246,7 +246,7 @@
     </p>
     <button
       type="submit"
-      class="rounded-lg bg-accent px-3 py-2 text-sm font-semibold text-page disabled:opacity-50"
+      class="bg-accent text-page rounded-lg px-3 py-2 text-sm font-semibold disabled:opacity-50"
       disabled={reader.adding}
     >
       {#if !reader.adding}
@@ -261,13 +261,13 @@
 
   {#if hits.length > 0}
     <ul
-      class="flex flex-col divide-y divide-line rounded-lg border border-line"
+      class="divide-line border-line flex flex-col divide-y rounded-lg border"
     >
       {#each hits as hit (hit.url)}
         <li>
           <button
             type="button"
-            class="flex w-full items-start gap-3 p-3 text-left hover:bg-side"
+            class="hover:bg-side flex w-full items-start gap-3 p-3 text-left"
             disabled={reader.adding}
             onclick={() => subscribe(hit.url, false)}
           >
@@ -278,10 +278,10 @@
             />
             <span class="flex min-w-0 flex-col gap-0.5">
               <span class="truncate text-sm font-semibold">{hit.title}</span>
-              <span class="line-clamp-2 text-xs text-muted"
+              <span class="text-muted line-clamp-2 text-xs"
                 >{hit.description}</span
               >
-              <span class="font-mono text-xs text-muted"
+              <span class="text-muted font-mono text-xs"
                 >{copy.subscribers(hit.subscribers)}</span
               >
             </span>
@@ -291,9 +291,9 @@
     </ul>
   {/if}
 
-  <div class="flex flex-col gap-3 border-t border-line pt-6">
+  <div class="border-line flex flex-col gap-3 border-t pt-6">
     <h3 class="font-reading text-lg font-bold">{copy.importTitle}</h3>
-    <p class="text-sm text-muted">{copy.importBody}</p>
+    <p class="text-muted text-sm">{copy.importBody}</p>
     <TextField
       id="import-group"
       label={copy.importGroupLabel}
@@ -329,7 +329,7 @@
   {#if reader.feeds.length > 0}
     <button
       type="button"
-      class="flex items-center justify-center gap-2 rounded-lg border border-line px-3 py-2 text-sm hover:bg-side"
+      class="border-line hover:bg-side flex items-center justify-center gap-2 rounded-lg border px-3 py-2 text-sm"
       onclick={exportFeeds}
     >
       <Download class="size-4" />

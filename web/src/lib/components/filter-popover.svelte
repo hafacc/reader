@@ -48,13 +48,13 @@ An open article's filters on a wide screen: a box below its filter button, close
 <svelte:window onpointerdown={onPointerDown} onkeydowncapture={onKeydown} />
 
 <div
-  class="absolute top-full right-0 z-20 mt-2 flex max-h-[min(28rem,70vh)] w-[min(28rem,calc(100vw-6rem))] flex-col rounded-xl border border-line bg-panel px-5 pt-3 pb-4 shadow-lg"
+  class="border-line bg-panel absolute top-full right-0 z-20 mt-2 flex max-h-[min(28rem,70vh)] w-[min(28rem,calc(100vw-6rem))] flex-col rounded-xl border px-5 pt-3 pb-4 shadow-lg"
   role="dialog"
   aria-label={copy.filters}
   bind:this={box}
 >
   <h2 class="flex items-center gap-2 pb-2 text-sm font-semibold">
-    <ListFilter class="size-4 text-muted" aria-hidden="true" />
+    <ListFilter class="text-muted size-4" aria-hidden="true" />
     {copy.filters}
   </h2>
   <div class="min-h-0 overflow-y-auto">

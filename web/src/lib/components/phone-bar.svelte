@@ -21,7 +21,7 @@ Phone bottom bar: one button and the screen's name, and optionally another butto
 </script>
 
 <header
-  class="order-last flex h-[calc(4rem+env(safe-area-inset-bottom))] shrink-0 items-center gap-1 border-t border-line bg-side px-1 pb-[env(safe-area-inset-bottom)] md:hidden"
+  class="border-line bg-side order-last flex h-[calc(4rem+env(safe-area-inset-bottom))] shrink-0 items-center gap-1 border-t px-1 pb-[env(safe-area-inset-bottom)] md:hidden"
 >
   <button
     type="button"

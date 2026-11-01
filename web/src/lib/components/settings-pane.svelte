@@ -97,16 +97,16 @@
     <div class="mx-auto flex max-w-xl flex-col gap-9 text-sm">
       <div class="flex items-start justify-between gap-4">
         <div class="flex min-w-0 flex-col gap-1">
-          <span class="hidden font-mono text-xs text-muted md:block"
+          <span class="text-muted hidden font-mono text-xs md:block"
             >{copy.settings}</span
           >
-          <h1 class="truncate font-reading text-3xl font-bold leading-tight">
+          <h1 class="font-reading truncate text-3xl leading-tight font-bold">
             {reader.viewTitle}
           </h1>
         </div>
         <button
           type="button"
-          class="hidden rounded-md p-1.5 text-muted hover:bg-side md:block"
+          class="text-muted hover:bg-side hidden rounded-md p-1.5 md:block"
           aria-label={copy.close}
           onclick={onback}
         >
@@ -115,7 +115,7 @@
       </div>
 
       {#if feed?.error}
-        <p class="-mt-5 text-sm text-danger">{feed.error}</p>
+        <p class="text-danger -mt-5 text-sm">{feed.error}</p>
       {/if}
 
       {#if renamable}
@@ -151,7 +151,7 @@
           value={reader.readingFont}
           onchange={(font) => reader.setReadingFont(font)}
         />
-        <p class="text-xs text-muted">{copy.readingFontHint}</p>
+        <p class="text-muted text-xs">{copy.readingFontHint}</p>
       </div>
 
       {#if reader.filtersApply}
@@ -167,7 +167,7 @@
             onchange={setMode}
           />
           <input
-            class="rounded-lg border border-line bg-panel px-3 py-2"
+            class="border-line bg-panel rounded-lg border px-3 py-2"
             placeholder={copy.addPhrase}
             aria-label={copy.addPhrase}
             bind:value={draft}
@@ -176,9 +176,7 @@
           >
           {#if orderedWords.length > 0}
             <ChipRows items={orderedWords} key={(word) => word}>
-              {#snippet chip(
-                word: string,
-              )}
+              {#snippet chip(word: string)}
                 <!-- on a phone the remove button takes taps 44 pixels across around its small circle -->
                 <span class="flex min-h-11 items-center md:min-h-0">
                   <span
@@ -190,17 +188,17 @@
                       : "border-line"}"
                   >
                     {word}
-                    <span class="font-mono text-xs tabular-nums text-muted"
+                    <span class="text-muted font-mono text-xs tabular-nums"
                       >{reader.wordCount(word)}</span
                     >
                     <button
                       type="button"
-                      class="group -my-1.5 grid size-11 place-items-center rounded-full text-muted md:my-0 md:size-6"
+                      class="group text-muted -my-1.5 grid size-11 place-items-center rounded-full md:my-0 md:size-6"
                       aria-label={copy.removeWord(word)}
                       onclick={() => removeWord(word)}
                     >
                       <span
-                        class="grid size-6 place-items-center rounded-full group-hover:bg-side"
+                        class="group-hover:bg-side grid size-6 place-items-center rounded-full"
                       >
                         <X class="size-3.5" />
                       </span>
@@ -210,7 +208,7 @@
               {/snippet}
             </ChipRows>
           {/if}
-          <p class="text-xs text-muted">{copy.filterHint}</p>
+          <p class="text-muted text-xs">{copy.filterHint}</p>
         </div>
 
         {#if reader.sections.length > 0 || reader.topicGroups.length > 0}
@@ -222,13 +220,13 @@
               topics={reader.topicGroups}
               fromArticle={false}
             />
-            <p class="text-xs text-muted">{copy.filtersHint}</p>
+            <p class="text-muted text-xs">{copy.filtersHint}</p>
           </div>
         {/if}
       {/if}
 
       {#if feed}
-        <div class="flex flex-col gap-3 border-t border-line pt-8">
+        <div class="border-line flex flex-col gap-3 border-t pt-8">
           <TextField
             id="feed-group"
             label={copy.groupLabel}
@@ -237,7 +235,7 @@
             value={feed.folder}
             onchange={changeGroup}
           />
-          <p class="text-xs text-muted">{copy.groupHint}</p>
+          <p class="text-muted text-xs">{copy.groupHint}</p>
           <ConfirmButton
             label={copy.unsubscribe}
             confirmLabel={copy.confirmUnsubscribe}
@@ -245,8 +243,8 @@
           />
         </div>
       {:else if folder !== ""}
-        <div class="flex flex-col gap-3 border-t border-line pt-8">
-          <p class="text-xs text-muted">{copy.deleteGroupHint}</p>
+        <div class="border-line flex flex-col gap-3 border-t pt-8">
+          <p class="text-muted text-xs">{copy.deleteGroupHint}</p>
           <ConfirmButton
             label={copy.deleteGroup}
             confirmLabel={copy.confirmDeleteGroup}

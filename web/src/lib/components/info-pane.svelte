@@ -60,9 +60,7 @@ The privacy policy, the terms or how to reach support, shown in the app, with a 
   }
 </script>
 
-{#snippet webLink(
-  size: string,
-)}
+{#snippet webLink(size: string)}
   <a
     class="grid {size} shrink-0 place-items-center rounded-md text-muted hover:bg-side hover:text-ink"
     href={webPages[page]}
@@ -85,14 +83,14 @@ The privacy policy, the terms or how to reach support, shown in the app, with a 
       <!-- on a phone the title is in the bottom bar alone -->
       <div class="hidden items-start justify-between gap-4 md:flex">
         <div class="flex items-center gap-2">
-          <h1 class="font-reading text-3xl font-bold leading-tight">
+          <h1 class="font-reading text-3xl leading-tight font-bold">
             {titles[page]}
           </h1>
           {@render webLink("size-8")}
         </div>
         <button
           type="button"
-          class="rounded-md p-1.5 text-muted hover:bg-side"
+          class="text-muted hover:bg-side rounded-md p-1.5"
           aria-label={copy.close}
           onclick={onback}
         >

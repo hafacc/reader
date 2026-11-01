@@ -1,5 +1,5 @@
 {
-  "$schema": "https://biomejs.dev/schemas/2.5.15/schema.json",
+  "$schema": "https://biomejs.dev/schemas/2.6.4/schema.json",
   "vcs": {
     "enabled": true,
     "clientKind": "git",
@@ -51,7 +51,11 @@
         },
         "useSimplifiedLogicExpression": "error",
         "useWhile": "error",
-        "useLiteralKeys": "off"
+        "useLiteralKeys": "off",
+        "noExcessiveNestedCallbacks": "error",
+        "noUnnecessaryTemplateExpression": "error",
+        "useArraySome": "error",
+        "useRegexpTest": "error"
       },
       "correctness": {
         "noGlobalDirnameFilename": "error",
@@ -66,16 +70,9 @@
       },
       "nursery": {
         "noBaseToString": "error",
-        "noConditionalExpect": "error",
-        "noDuplicateSelectors": "error",
-        "noEmptyObjectKeys": "error",
-        "noExcessiveNestedCallbacks": "error",
         "noExtendNative": "error",
         "noFloatingPromises": "error",
-        "noIdenticalTestTitle": "error",
-        "noInlineStyles": "error",
         "noInvalidFileInputAccept": "error",
-        "noLoopFunc": "error",
         "noMeaninglessVoidOperator": "error",
         "noMisusedPromises": "error",
         "noNegationInEqualityCheck": "error",
@@ -90,18 +87,13 @@
         "noSvelteUnnecessaryStateWrap": "error",
         "noTailwindRawColors": "error",
         "noThisOutsideOfClass": "error",
-        "noTopLevelLiterals": "error",
         "noUndeclaredCustomProperties": "error",
         "noUnmodifiedLoopCondition": "error",
-        "noUnnecessaryTemplateExpression": "error",
         "noUnsafePlusOperands": "error",
         "noUnsafeTypeAssertion": "error",
-        "noUntrustedLicenses": "error",
         "noUnusedClasses": "error",
         "noUselessTypeConversion": "error",
-        "useArraySome": "error",
         "useAwaitThenable": "error",
-        "useBaseline": "error",
         "useBetterDomTraversing": "error",
         "useConsistentFunctionStyle": {
           "level": "error",
@@ -109,39 +101,21 @@
             "style": "declaration"
           }
         },
-        "useConsistentTestIt": {
-          "level": "error",
-          "options": {
-            "function": "test",
-            "withinDescribe": "test"
-          }
-        },
         "useControlLabel": "error",
         "useDisposables": "error",
         "useExhaustiveSwitchCases": "error",
-        "useExpect": "error",
-        "useIframeSandbox": "error",
-        "useImportsFirst": "error",
         "useIncludes": "error",
         "useLogicalProperties": "error",
-        "useNamedCaptureGroup": "error",
         "useNamedLayer": "error",
         "useNullishCoalescing": "error",
         "usePromiseRejectErrors": "error",
-        "useReduceTypeParameter": "error",
         "useRegexpExec": "error",
-        "useRegexpTest": "error",
-        "useSortedClasses": "error",
         "useStrictBooleanExpressions": "error",
         "useStringStartsEndsWith": "error",
         "useSvelteRequireEachKey": "error",
         "useTailwindShorthandClasses": "error",
-        "useTestHooksInOrder": "error",
-        "useTestHooksOnTop": "error",
-        "useThisInClassMethods": "error",
-        "useUnicodeRegex": "error",
         "useValidTestTitle": "error",
-        "useVarsOnTop": "error"
+        "useTailwindSortedClasses": "error"
       },
       "performance": {
         "noAwaitInLoops": "error",
@@ -222,7 +196,24 @@
         "useThrowNewError": "error",
         "useThrowOnlyError": "error",
         "useTrimStartEnd": "error",
-        "useUnifiedTypeSignatures": "error"
+        "useUnifiedTypeSignatures": "error",
+        "noInlineStyles": "error",
+        "noTopLevelLiterals": "error",
+        "useConsistentTestIt": {
+          "level": "error",
+          "options": {
+            "function": "test",
+            "withinDescribe": "test"
+          }
+        },
+        "useImportsFirst": "error",
+        "useNamedCaptureGroup": "error",
+        "useReduceTypeParameter": "error",
+        "useTestHooksInOrder": "error",
+        "useTestHooksOnTop": "error",
+        "useThisInClassMethods": "error",
+        "useUnicodeRegex": "error",
+        "useVarsOnTop": "error"
       },
       "suspicious": {
         "noAlert": "error",
@@ -260,7 +251,18 @@
         "useErrorMessage": "error",
         "useGuardForIn": "error",
         "useNumberToFixedDigitsArgument": "error",
-        "useStaticResponseMethods": "error"
+        "useStaticResponseMethods": "error",
+        "noConditionalExpect": "error",
+        "noDuplicateSelectors": "error",
+        "noEmptyObjectKeys": "error",
+        "noIdenticalTestTitle": "error",
+        "noLoopFunc": "error",
+        "noUntrustedLicenses": "error",
+        "useBaseline": "error",
+        "useExpect": "error"
+      },
+      "security": {
+        "useIframeSandbox": "error"
       }
     }
   },
