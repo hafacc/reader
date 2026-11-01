@@ -3,11 +3,12 @@
   import Folder from "@lucide/svelte/icons/folder";
   import Inbox from "@lucide/svelte/icons/inbox";
   import Mail from "@lucide/svelte/icons/mail";
+  import MessageSquare from "@lucide/svelte/icons/message-square";
   import PanelLeftClose from "@lucide/svelte/icons/panel-left-close";
   import PanelLeftOpen from "@lucide/svelte/icons/panel-left-open";
   import Plus from "@lucide/svelte/icons/plus";
   import Star from "@lucide/svelte/icons/star";
-  import { contactUrl } from "#lib/config.ts";
+  import { feedbackUrl } from "#lib/config.ts";
   import { copy } from "#lib/copy.ts";
   import {
     type FeedRow,
@@ -32,6 +33,7 @@
     onpick,
     onadd,
     onaccount,
+    oncontact,
   }: {
     reader: Reader;
     collapsed?: boolean;
@@ -46,6 +48,8 @@
     onadd: () => void;
     /** Show the sign-in and sync details. */
     onaccount: () => void;
+    /** Show how to reach support. */
+    oncontact: () => void;
   } = $props();
 
   const fade =
@@ -245,15 +249,29 @@
     {/each}
   </div>
 
-  <a
-    href={contactUrl}
+  <button
+    type="button"
     class="mt-2 flex h-9 shrink-0 items-center gap-2.5 whitespace-nowrap rounded-lg px-2.5 text-sm text-muted hover:bg-panel"
     title={copy.contactUs}
+    onclick={oncontact}
   >
     <span class="flex size-5 shrink-0 items-center justify-center"
       ><Mail class="size-[18px]" /></span
     >
     <span class="truncate {fade}">{copy.contactUs}</span>
+  </button>
+
+  <a
+    href={feedbackUrl}
+    target="_blank"
+    rel="noopener noreferrer"
+    class="flex h-9 shrink-0 items-center gap-2.5 whitespace-nowrap rounded-lg px-2.5 text-sm text-muted hover:bg-panel"
+    title={copy.feedback}
+  >
+    <span class="flex size-5 shrink-0 items-center justify-center"
+      ><MessageSquare class="size-[18px]" /></span
+    >
+    <span class="truncate {fade}">{copy.feedback}</span>
   </a>
 
   <button

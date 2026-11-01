@@ -3,18 +3,34 @@
   import LogIn from "@lucide/svelte/icons/log-in";
   import LogOut from "@lucide/svelte/icons/log-out";
   import X from "@lucide/svelte/icons/x";
-  import { contactUrl, privacyUrl, termsUrl } from "#lib/config.ts";
+  import { feedbackUrl } from "#lib/config.ts";
   import { copy } from "#lib/copy.ts";
   import type { Reader } from "#lib/reader.svelte.ts";
   import { type Retention, retentionFromDays } from "#lib/sync/documents.ts";
   import type { SyncStatus as Status } from "#lib/sync/host.ts";
+  import type { InfoPage } from "#lib/types.ts";
   import AccountAvatar from "./account-avatar.svelte";
   import ConfirmButton from "./confirm-button.svelte";
   import PhoneBar from "./phone-bar.svelte";
   import Segmented from "./segmented.svelte";
   import SyncStatus from "./sync-status.svelte";
 
-  const { reader, onback }: { reader: Reader; onback: () => void } = $props();
+  const {
+    reader,
+    onback,
+    onpage,
+  }: {
+    reader: Reader;
+    onback: () => void;
+    /** Show the privacy policy, the terms or how to reach support. */
+    onpage: (page: InfoPage) => void;
+  } = $props();
+
+  const pages: { page: InfoPage; label: string }[] = [
+    { page: "privacy", label: copy.privacy },
+    { page: "terms", label: copy.terms },
+    { page: "contact", label: copy.contact },
+  ];
 
   const sync = $derived(reader.sync);
 
@@ -205,13 +221,22 @@
             <p class="text-muted">{copy.syncSignInFailed}</p>
           {/if}
         {/if}
-        <p class="flex gap-4 text-xs text-muted">
-          <a class="underline hover:text-ink" href={privacyUrl}
-            >{copy.privacy}</a
-          >
-          <a class="underline hover:text-ink" href={termsUrl}>{copy.terms}</a>
-          <a class="underline hover:text-ink" href={contactUrl}
-            >{copy.contact}</a
+        <p class="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted">
+          {#each pages as { page, label } (page)}
+            <button
+              type="button"
+              class="underline hover:text-ink"
+              onclick={() => onpage(page)}
+            >
+              {label}
+            </button>
+          {/each}
+          <a
+            class="underline hover:text-ink"
+            href={feedbackUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            >{copy.feedback}</a
           >
         </p>
       </section>

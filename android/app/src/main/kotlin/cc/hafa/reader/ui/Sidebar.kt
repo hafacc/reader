@@ -15,6 +15,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.outlined.Message
 import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.ErrorOutline
 import androidx.compose.material.icons.outlined.Folder
@@ -32,6 +33,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
@@ -42,19 +44,21 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import cc.hafa.reader.R
+import cc.hafa.reader.sync.SyncConfig
 import cc.hafa.reader.core.Selection
 import cc.hafa.reader.core.sidebarRows
 import cc.hafa.reader.core.viewKey
 
-private val PINNED_FOOTER_HEIGHT = 536.dp
+private val PINNED_FOOTER_HEIGHT = 592.dp
 
-/** The feed list in the left drawer: the brand, All items, Starred, groups and feeds, Contact us, sync, and Add feed. */
+/** The feed list in the left drawer: the brand, All items, Starred, groups and feeds, Contact us, Feedback, sync, and Add feed. */
 @Composable
 fun Sidebar(snapshot: Snapshot, viewModel: ReaderViewModel, onPicked: () -> Unit) {
     val (state, view) = snapshot
     val colors = ReaderTheme.colors
     val selectedKey = viewKey(state.selection)
     val sync by viewModel.syncUi.collectAsStateWithLifecycle()
+    val links = LocalUriHandler.current
     val footer: @Composable () -> Unit = {
         HorizontalDivider(Modifier.padding(horizontal = 28.dp, vertical = 8.dp), color = colors.line)
         SidebarItem(
@@ -64,6 +68,16 @@ fun Sidebar(snapshot: Snapshot, viewModel: ReaderViewModel, onPicked: () -> Unit
             icon = { tint -> Icon(Icons.Outlined.MailOutline, null, tint = tint) },
             onClick = {
                 viewModel.showContact()
+                onPicked()
+            },
+        )
+        SidebarItem(
+            label = stringResource(R.string.feedback),
+            count = 0,
+            selected = false,
+            icon = { tint -> Icon(Icons.AutoMirrored.Outlined.Message, null, tint = tint) },
+            onClick = {
+                links.openUri(SyncConfig.FEEDBACK_URL)
                 onPicked()
             },
         )
@@ -94,7 +108,7 @@ fun Sidebar(snapshot: Snapshot, viewModel: ReaderViewModel, onPicked: () -> Unit
             },
         )
     }
-    // On a short screen, such as a phone on its side, Contact us, sync and Add feed scroll with the list rather than squeezing it.
+    // On a short screen, such as a phone on its side, Contact us, Feedback, sync and Add feed scroll with the list rather than squeezing it.
     BoxWithConstraints(Modifier.fillMaxHeight()) {
         val footerPinned = maxHeight >= PINNED_FOOTER_HEIGHT
         Column(

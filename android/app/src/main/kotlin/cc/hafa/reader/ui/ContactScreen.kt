@@ -18,10 +18,15 @@ import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import cc.hafa.reader.R
+import cc.hafa.reader.core.PolicyRun
+import cc.hafa.reader.core.SITE_URL
 import cc.hafa.reader.sync.SyncConfig
 import kotlinx.coroutines.launch
 
-/** How to reach support: the email address, which a tap writes to and a long press copies. */
+/**
+ * How to reach support: the email address, which a tap writes to and a long press copies, feedback on GitHub, and
+ * where to delete the account and read the privacy policy, as on the web page, with a link to it in the bottom bar.
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ContactScreen(viewModel: ReaderViewModel) {
@@ -29,8 +34,13 @@ fun ContactScreen(viewModel: ReaderViewModel) {
     val clipboard = LocalClipboard.current
     val scope = rememberCoroutineScope()
     val links = LocalUriHandler.current
+    val open = rememberInfoLinks(viewModel)
     ReaderScaffold(
-        bottomBar = { scrollBehavior -> BackBottomBar(stringResource(R.string.contact), scrollBehavior, viewModel::back) },
+        bottomBar = { scrollBehavior ->
+            BackBottomBar(stringResource(R.string.contact), scrollBehavior, viewModel::back) {
+                WebPageButton(Detail.Contact)
+            }
+        },
     ) { padding ->
         Column(
             Modifier.scrollingScreen(padding),
@@ -58,6 +68,21 @@ fun ContactScreen(viewModel: ReaderViewModel) {
                 lineHeight = 24.sp,
                 textDecoration = TextDecoration.Underline,
             )
+            val feedback = listOf(
+                PolicyRun("${stringResource(R.string.contact_feedback)} "),
+                PolicyRun(stringResource(R.string.contact_feedback_link), SyncConfig.FEEDBACK_URL),
+                PolicyRun("."),
+            )
+            val elsewhere = listOf(
+                PolicyRun("${stringResource(R.string.contact_delete)} "),
+                PolicyRun(stringResource(R.string.contact_delete_link), "$SITE_URL/delete"),
+                PolicyRun(". ${stringResource(R.string.contact_privacy)} "),
+                PolicyRun(stringResource(R.string.contact_privacy_link), "$SITE_URL/privacy"),
+                PolicyRun("."),
+            )
+            for (runs in listOf(feedback, elsewhere)) {
+                Text(linked(runs, open), fontSize = 16.sp, lineHeight = 24.sp, color = colors.text)
+            }
         }
     }
 }

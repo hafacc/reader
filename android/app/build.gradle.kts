@@ -58,6 +58,10 @@ android {
     buildFeatures {
         compose = true
     }
+    sourceSets {
+        // The policies, written once for the web and the app.
+        getByName("main").assets.srcDir("../../shared/policy")
+    }
     lint {
         warningsAsErrors = true
         // Version nags appear on their own as time passes; Dependabot handles them.

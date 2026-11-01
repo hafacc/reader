@@ -80,12 +80,15 @@ export type Selection =
   | { kind: "folder"; name: string }
   | { kind: "feed"; id: string };
 
+/** A page of the app's that is also a web page of its own: the privacy policy, the terms or how to reach support. */
+export type InfoPage = "privacy" | "terms" | "contact";
+
 /** Where the person is in the app, kept in each browser history entry. */
 export interface Place {
   /** Which column is on screen on a phone. */
   screen: "list" | "detail";
   /** What the detail column shows. */
-  detail: "article" | "settings" | "add" | "help";
+  detail: "article" | "settings" | "add" | "help" | InfoPage;
   /** The view the list shows. */
   selection: Selection;
   /** The open article; empty for none. */

@@ -20,11 +20,8 @@ object SyncConfig {
     /** OAuth client id of the project's web client, which Google sign-in asks tokens for. */
     const val WEB_CLIENT_ID = "508750223929-mcb6p0vbm1c9iqgs9fa9hibegmaek77o.apps.googleusercontent.com"
 
-    /** The privacy policy. */
-    const val PRIVACY_URL = "https://reader.hafa.cc/privacy"
-
-    /** The terms of service. */
-    const val TERMS_URL = "https://reader.hafa.cc/terms"
+    /** The issues on GitHub, where feedback goes. */
+    const val FEEDBACK_URL = "https://github.com/hafacc/reader/issues"
 
     /** The support address. */
     const val SUPPORT_EMAIL = "support@reader.hafa.cc"
