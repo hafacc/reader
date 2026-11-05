@@ -68,11 +68,10 @@ test("hide wins over only", () => {
   ).toBe(false);
 });
 
-test("an article is hidden when all of its topics are off", () => {
-  expect(passes(settings({ offTopics: ["politics"] }), story)).toBe(true);
-  expect(passes(settings({ offTopics: ["Politics", "u.s."] }), story)).toBe(
-    false,
-  );
+test("an article is hidden when any of its topics is off", () => {
+  expect(passes(settings({ offTopics: ["sports"] }), story)).toBe(true);
+  expect(passes(settings({ offTopics: ["Politics"] }), story)).toBe(false);
+  expect(passes(settings({ offTopics: ["u.s."] }), story)).toBe(false);
   const untagged = { ...story, categories: [] };
   expect(passes(settings({ offTopics: ["politics"] }), untagged)).toBe(true);
 });

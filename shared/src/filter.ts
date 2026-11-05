@@ -39,7 +39,7 @@ export interface ViewSettings {
   /** When not empty, only articles whose title or summary has one of these stay. */
   onlyWords: string[];
   /**
-   * Topics turned off; an article whose topics are all off is hidden. Entries
+   * Topics turned off; an article with any of them is hidden. Entries
    * starting with `SECTION_PREFIX` hold turned-off sections' places instead,
    * which hide every article in them.
    */
@@ -256,8 +256,7 @@ export function keeper(
   return (entry): boolean => {
     const topicsOff =
       off.size > 0 &&
-      entry.categories.length > 0 &&
-      entry.categories.every((topic) => off.has(topic.trim().toLowerCase()));
+      entry.categories.some((topic) => off.has(topic.trim().toLowerCase()));
     const hidden =
       matchesEntry(hide, entry) ||
       (places.length > 0 &&

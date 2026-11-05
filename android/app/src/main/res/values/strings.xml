@@ -63,7 +63,7 @@
     <string name="refresh">Refresh</string>
     <!-- Said by the dot on the logo when feeds are overdue for a check. -->
     <string name="refresh_suggested">Some feeds are due for a check</string>
-    <string name="filters_hint">Select a section or topic to turn it off. Articles in a turned-off section, or whose topics are all turned off, are hidden.</string>
+    <string name="filters_hint">Select a section or topic to turn it off. Articles in a turned-off section, or with a turned-off topic, are hidden.</string>
     <string name="name_label">Name</string>
     <string name="group_label">Group</string>
     <string name="no_group">No group</string>
