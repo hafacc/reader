@@ -1,15 +1,14 @@
 package cc.hafa.reader.ui
 
-import androidx.compose.foundation.ScrollState
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.lazy.LazyListState
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.key
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.graphics.BlendMode
@@ -55,18 +54,18 @@ private fun Modifier.bleed(edge: Dp): Modifier =
     }
 
 /** Fade the ends of a sideways-scrolling row where more lies past them. */
-private fun Modifier.edgeFades(scroll: ScrollState): Modifier =
+private fun Modifier.edgeFades(scroll: LazyListState): Modifier =
     graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }
         .drawWithContent {
             drawContent()
             val fade = FADE.toPx()
-            if (scroll.value > 0) {
+            if (scroll.canScrollBackward) {
                 drawRect(
                     Brush.horizontalGradient(listOf(Color.Transparent, Color.Black), startX = 0f, endX = fade),
                     blendMode = BlendMode.DstIn,
                 )
             }
-            if (scroll.value < scroll.maxValue) {
+            if (scroll.canScrollForward) {
                 drawRect(
                     Brush.horizontalGradient(listOf(Color.Black, Color.Transparent), startX = size.width - fade, endX = size.width),
                     blendMode = BlendMode.DstIn,
@@ -74,10 +73,11 @@ private fun Modifier.edgeFades(scroll: ScrollState): Modifier =
             }
         }
 
+// A row's chips are laid out only as they scroll into view: a view can have thousands of topics.
 @Composable
 private fun FilterRow(label: String, chips: List<FilterChipItem>, section: Boolean, edge: Dp) {
-    val scroll = rememberScrollState()
-    Row(
+    val scroll = rememberLazyListState()
+    LazyRow(
         Modifier
             .bleed(edge)
             .fillMaxWidth()
@@ -85,15 +85,14 @@ private fun FilterRow(label: String, chips: List<FilterChipItem>, section: Boole
                 contentDescription = label
                 isTraversalGroup = true
             }
-            .edgeFades(scroll)
-            .horizontalScroll(scroll)
-            .padding(horizontal = edge),
+            .edgeFades(scroll),
+        state = scroll,
+        contentPadding = PaddingValues(horizontal = edge),
         horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        for (chip in chips) {
-            key(chip.key) {
-                TopicChip(chip.label, state = chip.state, onToggle = chip.onToggle, count = chip.count, section = section)
-            }
+        // A list throws on a repeated key; an article can carry the same topic twice in different case.
+        items(chips.distinctBy { chip -> chip.key }, key = { chip -> chip.key }) { chip ->
+            TopicChip(chip.label, state = chip.state, onToggle = chip.onToggle, count = chip.count, section = section)
         }
     }
 }
