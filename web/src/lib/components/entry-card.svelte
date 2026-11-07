@@ -34,6 +34,10 @@
   const SWIPE_LIMIT = 140;
 
   let offset = $state(0);
+  const past = $derived(Math.abs(offset) >= SWIPE_DISTANCE);
+  const iconClass = $derived(
+    `size-5 transition-transform duration-150 ${past ? "scale-125" : ""}`,
+  );
   let startX = 0;
   // a touch from the screen's edge opens the feed list instead
   let fromEdge = false;
@@ -78,7 +82,11 @@
       }
       if (swiping) {
         moved = true;
+        const wasPast = past;
         offset = Math.max(-SWIPE_LIMIT, Math.min(SWIPE_LIMIT, across));
+        if (past && !wasPast) {
+          navigator.vibrate?.(10);
+        }
       }
     }
   }
@@ -109,15 +117,17 @@
   class="border-line relative overflow-hidden border-b [contain-intrinsic-size:auto_7.5rem] [content-visibility:auto]"
 >
   <div
-    class="bg-accent-soft text-accent absolute inset-0 flex items-center justify-between px-6"
+    class="absolute inset-0 flex items-center justify-between px-6 transition-colors duration-150 {past
+      ? "bg-accent text-page"
+      : "bg-accent-soft text-accent"}"
     aria-hidden="true"
   >
     {#if read}
-      <Undo2 class="size-5" />
-      <Undo2 class="size-5" />
+      <Undo2 class={iconClass} />
+      <Undo2 class={iconClass} />
     {:else}
-      <Check class="size-5" />
-      <Check class="size-5" />
+      <Check class={iconClass} />
+      <Check class={iconClass} />
     {/if}
   </div>
   <div
