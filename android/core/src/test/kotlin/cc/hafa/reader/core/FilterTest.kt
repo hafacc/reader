@@ -69,9 +69,10 @@ class FilterTest {
     }
 
     @Test
-    fun `an article is hidden when all of its topics are off`() {
-        assertTrue(passes(ViewSettings(offTopics = listOf("politics")), story))
-        assertFalse(passes(ViewSettings(offTopics = listOf("Politics", "u.s.")), story))
+    fun `an article is hidden when any of its topics is off`() {
+        assertTrue(passes(ViewSettings(offTopics = listOf("sports")), story))
+        assertFalse(passes(ViewSettings(offTopics = listOf("Politics")), story))
+        assertFalse(passes(ViewSettings(offTopics = listOf("u.s.")), story))
         val untagged = story.copy(categories = emptyList())
         assertTrue(passes(ViewSettings(offTopics = listOf("politics")), untagged))
     }

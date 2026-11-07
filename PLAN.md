@@ -322,8 +322,8 @@ decides). Web with the extension closed gets nothing until a device opens.
   and summary with capitals ignored, any run of
   whitespace matches any whitespace, a word boundary is required at an end only
   when that end is a word character, and each list is compiled once. Every topic
-  the feed supplies starts on; tap one to turn it off, and an article whose
-  topics are all off is hidden. The panel's words, and the topics on each
+  the feed supplies starts on; tap one to turn it off, and an article with any
+  topic turned off is hidden. The panel's words, and the topics on each
   article's card in the list, are ordered by how many of the view's articles
   carry or match each (most first, then by name; an article lists each of its
   topics once), wrapping into up to three rows; when they need more, they go

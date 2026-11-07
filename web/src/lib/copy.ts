@@ -93,7 +93,7 @@ export const copy = {
   /** The article's filter button while any of its sections or topics is turned off, for screen readers. */
   filtersSomeOff: "Filters, some turned off",
   filtersHint:
-    "Select a section or topic to turn it off. Articles in a turned-off section, or whose topics are all turned off, are hidden.",
+    "Select a section or topic to turn it off. Articles in a turned-off section, or with a turned-off topic, are hidden.",
   nameLabel: "Name",
   groupLabel: "Group",
   noGroup: "No group",
