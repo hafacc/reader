@@ -471,6 +471,25 @@ describe("unread counts", () => {
     expect(reader.visible).toEqual([]);
   });
 
+  test("filtered articles show until the view changes", () => {
+    const reader = makeReader([
+      article("a", { feedId: "tech" }),
+      article("b", { feedId: "tech", categories: ["Crypto"] }),
+      article("c", { feedId: "tech", categories: ["Crypto"], read: true }),
+    ]);
+    reader.select({ kind: "feed", id: "tech" });
+    expect(reader.filtersHide).toBe(false);
+    reader.settings = { "feed:tech": settings({ offTopics: ["crypto"] }) };
+    expect(reader.filtersHide).toBe(true);
+    expect(reader.visible.map((entry) => entry.id)).toEqual(["a"]);
+    reader.setShowFiltered(true);
+    expect(reader.visible.map((entry) => entry.id).sort()).toEqual(["a", "b"]);
+    const [shown] = reader.visible.filter((entry) => entry.id === "b");
+    expect(shown && reader.shownFiltered(shown)).toBe(true);
+    reader.select({ kind: "all" });
+    expect(reader.showFiltered).toBe(false);
+  });
+
   test("mark all read clears what the count shows", async () => {
     const reader = makeReader([
       article("a", { feedId: "tech" }),

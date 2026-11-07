@@ -369,6 +369,7 @@ class ReaderModel(
                 first.heldTopics === second.heldTopics && first.frozenRank === second.frozenRank &&
                 first.heldEntries === second.heldEntries && first.heldFeeds === second.heldFeeds &&
                 first.frozenList === second.frozenList && first.selection == second.selection && first.unreadOnly == second.unreadOnly &&
+                first.showFiltered == second.showFiltered &&
                 first.currentId == second.currentId
             )
 
@@ -382,10 +383,23 @@ class ReaderModel(
                 close()
             }
             update { current ->
-                current.copy(pinned = emptySet(), heldTopics = emptyMap(), heldEntries = current.heldEntries?.let { current.entryIds() }, frozenList = null)
+                current.copy(
+                    pinned = emptySet(),
+                    heldTopics = emptyMap(),
+                    showFiltered = false,
+                    heldEntries = current.heldEntries?.let { current.entryIds() },
+                    frozenList = null,
+                )
             }
         }
         preferences.lastView = viewKey(chosen)
+    }
+
+    /** List the articles the filters hide too, or hide them again. */
+    fun setShowFiltered(next: Boolean) {
+        update { current ->
+            current.copy(showFiltered = next, heldEntries = current.heldEntries?.let { current.entryIds() }, frozenList = null)
+        }
     }
 
     /** Turn the unread-only switch on or off, and remember it; turning it on closes an open article already read. */

@@ -4,6 +4,7 @@
   import CircleAlert from "@lucide/svelte/icons/circle-alert";
   import Eye from "@lucide/svelte/icons/eye";
   import EyeOff from "@lucide/svelte/icons/eye-off";
+  import Funnel from "@lucide/svelte/icons/funnel";
   import RefreshCw from "@lucide/svelte/icons/refresh-cw";
   import SlidersHorizontal from "@lucide/svelte/icons/sliders-horizontal";
   import { copy } from "#lib/copy.ts";
@@ -305,6 +306,20 @@
       >{copy.unread(reader.viewUnread)}</span
     >
     <span class="flex-1"></span>
+    {#if reader.filtersHide}
+      <button
+        type="button"
+        class="grid size-12 place-items-center rounded-md md:size-8 {reader.showFiltered
+          ? "bg-accent text-page"
+          : "text-muted hover:bg-side"}"
+        aria-label={copy.showFiltered}
+        aria-pressed={reader.showFiltered}
+        title={copy.showFiltered}
+        onclick={() => reader.setShowFiltered(!reader.showFiltered)}
+      >
+        <Funnel class="size-5 md:size-4" />
+      </button>
+    {/if}
     <button
       type="button"
       class="grid size-12 place-items-center rounded-md md:size-8 hover:bg-side {reader.unreadOnly
@@ -395,6 +410,7 @@
           source={feedTitles.get(entry.feedId) ?? ""}
           topics={articleTopics(entry.categories, reader.topicOrder)}
           active={entry.id === reader.currentId}
+          filtered={reader.shownFiltered(entry)}
           onopen={() => {
             logFailure(reader.open(entry.id));
             onopen();

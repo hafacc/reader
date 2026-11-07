@@ -421,6 +421,10 @@ decides). Web with the extension closed gets nothing until a device opens.
   asked for by a pull past the end. Only a refresh the person asks for shows: an import's
   first check of its feeds runs behind the loading screen, and every other
   check and every change from the account lands unseen.
+- **Show filtered:** a funnel button in the list's bar, only while the view's
+  filters (words, topics, sections) hide an article it would otherwise list.
+  Pressed, it fills in and the hidden articles join the list in place, faded;
+  pressed again, or on changing view, they go.
 - **Unread only:** one switch for the whole app, an eye button in the list's bar (at the bottom on a phone),
   on by default; it lists only unread articles in every feed and group (not in
   Starred) and hides feeds in the sidebar that have nothing unread (the one you are
@@ -553,7 +557,7 @@ decides). Web with the extension closed gets nothing until a device opens.
   above the home indicator and the keyboard). The list has the button that opens the feed
   list (the logo, which carries the refresh dot and broadcasts its waves while feeds
   are checked, still when the system or browser turns motion off; the view's name,
-  cut short with an ellipsis when long; and a small chevron), unread only, view settings
+  cut short with an ellipsis when long; and a small chevron), show filtered (only while filters hide something), unread only, view settings
   and mark all as read (dimmed and off, for screen readers too, while the view has
   nothing unread, empty or not; `Shift A` then does nothing); the article has Back, filters (when it has any), star,
   read, share and open the original, which on a phone appear only there; view settings,

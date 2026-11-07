@@ -12,6 +12,7 @@
     source,
     topics,
     active,
+    filtered = false,
     onopen,
     ontoggle,
     onstar,
@@ -23,6 +24,8 @@
     /** The article's topics in the view's order. */
     topics: string[];
     active: boolean;
+    /** Whether the filters hide it and it shows only because filtered articles are showing. */
+    filtered?: boolean;
     onopen: () => void;
     ontoggle: () => void;
     onstar: () => void;
@@ -148,7 +151,7 @@
       id="entry-{entry.id}"
       class="flex w-full gap-3 px-4 py-3.5 text-left {entry.imageUrl
         ? "min-h-[7.5rem]"
-        : ""}"
+        : ""} {filtered ? "opacity-55" : ""}"
       onclick={onClick}
     >
       <span class="flex min-w-0 flex-1 flex-col gap-1">
