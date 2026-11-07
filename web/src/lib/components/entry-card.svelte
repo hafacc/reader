@@ -4,6 +4,7 @@
   import Undo2 from "@lucide/svelte/icons/undo-2";
   import { copy } from "#lib/copy.ts";
   import { SIDEWAYS_RATIO, startsAtEdge } from "#lib/gestures.ts";
+  import type { Nearby } from "#lib/nearby.ts";
   import type { Entry } from "#lib/types.ts";
 
   const {
@@ -13,6 +14,7 @@
     topics,
     active,
     filtered = false,
+    nearby,
     onopen,
     ontoggle,
     onstar,
@@ -26,6 +28,8 @@
     active: boolean;
     /** Whether the filters hide it and it shows only because filtered articles are showing. */
     filtered?: boolean;
+    /** Tells the card when it nears the screen; without it, the card draws only on screen and fetches its picture lazily. */
+    nearby?: Nearby | undefined;
     onopen: () => void;
     ontoggle: () => void;
     onstar: () => void;
@@ -35,6 +39,17 @@
   const SWIPE_DISTANCE = 80;
   const SWIPE_START = 12;
   const SWIPE_LIMIT = 140;
+
+  // whether the card is within reach of the screen, and whether it ever was, so its picture stays once fetched
+  let near = $state(false);
+  let wasNear = $state(false);
+
+  function watchNear(row: HTMLElement): (() => void) | undefined {
+    return nearby?.watch(row, (next) => {
+      near = next;
+      wasNear ||= next;
+    });
+  }
 
   let offset = $state(0);
   const past = $derived(Math.abs(offset) >= SWIPE_DISTANCE);
@@ -117,7 +132,10 @@
 </script>
 
 <div
-  class="border-line relative overflow-hidden border-b [contain-intrinsic-size:auto_7.5rem] [content-visibility:auto]"
+  class="border-line relative overflow-hidden border-b [contain-intrinsic-size:auto_7.5rem] {near
+    ? ""
+    : "[content-visibility:auto]"}"
+  {@attach watchNear}
 >
   <div
     class="absolute inset-0 flex items-center justify-between px-6 transition-colors duration-150 {past
@@ -178,10 +196,10 @@
       </span>
       {#if entry.imageUrl}
         <img
-          src={entry.imageUrl}
+          src={nearby === undefined || wasNear ? entry.imageUrl : undefined}
           alt=""
           referrerpolicy="no-referrer"
-          loading="lazy"
+          loading={nearby === undefined ? "lazy" : "eager"}
           class="size-16 shrink-0 self-start rounded-md object-cover"
         >
       {/if}
