@@ -1,11 +1,16 @@
 package cc.hafa.reader.ui
 
 import android.text.format.DateFormat
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.animate
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.Orientation
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.gestures.draggable
+import androidx.compose.foundation.gestures.rememberDraggableState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -16,6 +21,7 @@ import androidx.compose.foundation.layout.calculateStartPadding
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
@@ -37,17 +43,16 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.SwipeToDismissBox
-import androidx.compose.material3.SwipeToDismissBoxValue
 import androidx.compose.material3.Text
 import androidx.compose.material3.pulltorefresh.PullToRefreshDefaults
 import androidx.compose.material3.pulltorefresh.pullToRefresh
 import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
-import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -57,12 +62,14 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.stringResource
@@ -75,6 +82,8 @@ import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import cc.hafa.reader.R
@@ -84,14 +93,17 @@ import cc.hafa.reader.core.Selection
 import cc.hafa.reader.core.ViewTitle
 import cc.hafa.reader.core.articleTopics
 import coil3.compose.AsyncImage
-import kotlinx.coroutines.flow.drop
-import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.launch
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.Locale
+import kotlin.math.abs
+import kotlin.math.roundToInt
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.flow.drop
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
 
 /** Name of a view in the reader's words. */
 @Composable
@@ -337,7 +349,11 @@ private fun age(published: Long): String {
     return DateTimeFormatter.ofPattern(pattern, locale).format(moment)
 }
 
-/** One article in the list; swiping it sideways marks it read or unread. */
+// How far a card must be swiped to mark it on release, and the most it moves.
+private val SWIPE_MARK = 80.dp
+private val SWIPE_LIMIT = 140.dp
+
+/** One article in the list; swiping it sideways past a mark and letting go marks it read or unread. */
 @Composable
 private fun EntryCard(
     entry: Entry,
@@ -352,36 +368,57 @@ private fun EntryCard(
     val colors = ReaderTheme.colors
     val readIcon = if (read) Icons.AutoMirrored.Outlined.Undo else Icons.Outlined.Check
     val hasImage = entry.imageUrl.isNotEmpty()
-    val swipe = rememberSwipeToDismissBoxState()
-    val scope = rememberCoroutineScope()
+    val haptics = LocalHapticFeedback.current
     val latestToggleRead by rememberUpdatedState(onToggleRead)
-    // SwipeToDismissBox calls this again whenever it is a new lambda while the card is still out; toggling recomposes
-    // the card, so a fresh lambda on each pass would flip the mark back and forth until the card is back in place.
-    val onDismiss: (SwipeToDismissBoxValue) -> Unit = remember(swipe, scope) {
-        { _ ->
-            latestToggleRead()
-            scope.launch { swipe.reset() }
+    val density = LocalDensity.current
+    val mark = with(density) { SWIPE_MARK.toPx() }
+    val limit = with(density) { SWIPE_LIMIT.toPx() }
+    val scope = rememberCoroutineScope()
+    var swipeOffset by remember { mutableFloatStateOf(0f) }
+    val snapBack = remember { arrayOfNulls<Job>(1) }
+    val past by remember { derivedStateOf { abs(swipeOffset) >= mark } }
+    LaunchedEffect(haptics) {
+        snapshotFlow { past }.drop(1).collect { crossed ->
+            if (crossed) {
+                haptics.performHapticFeedback(HapticFeedbackType.GestureThresholdActivate)
+            }
         }
     }
+    val dragState = rememberDraggableState { delta -> swipeOffset = (swipeOffset + delta).coerceIn(-limit, limit) }
+    val backdrop by animateColorAsState(if (past) colors.accent else colors.accentSoft, label = "swipe backdrop")
+    val iconTint by animateColorAsState(if (past) colors.page else colors.accent, label = "swipe icon")
+    val iconScale by animateFloatAsState(if (past) 1.25f else 1f, label = "swipe icon scale")
     Column {
-        SwipeToDismissBox(
-            state = swipe,
-            onDismiss = onDismiss,
-            backgroundContent = {
-                Row(
-                    Modifier
-                        .fillMaxSize()
-                        .background(colors.accentSoft)
-                        .padding(horizontal = 24.dp),
-                    horizontalArrangement = if (swipe.dismissDirection == SwipeToDismissBoxValue.EndToStart) Arrangement.End else Arrangement.Start,
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Icon(readIcon, null, tint = colors.accent)
-                }
-            },
+        Box(
+            Modifier.draggable(
+                dragState,
+                Orientation.Horizontal,
+                reverseDirection = LocalLayoutDirection.current == LayoutDirection.Rtl,
+                onDragStarted = { snapBack[0]?.cancel() },
+                onDragStopped = {
+                    if (abs(swipeOffset) >= mark) {
+                        latestToggleRead()
+                        haptics.performHapticFeedback(HapticFeedbackType.Confirm)
+                    }
+                    snapBack[0] = scope.launch {
+                        animate(swipeOffset, 0f) { value, _ -> swipeOffset = value }
+                    }
+                },
+            ),
         ) {
+            Row(
+                Modifier
+                    .matchParentSize()
+                    .background(backdrop)
+                    .padding(horizontal = 24.dp),
+                horizontalArrangement = if (swipeOffset < 0) Arrangement.End else Arrangement.Start,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Icon(readIcon, null, tint = iconTint, modifier = Modifier.scale(iconScale))
+            }
             Column(
                 Modifier
+                    .offset { IntOffset(swipeOffset.roundToInt(), 0) }
                     .fillMaxWidth()
                     .background(if (active) colors.accentSoft else colors.page)
                     .clickable(onClick = onOpen)
