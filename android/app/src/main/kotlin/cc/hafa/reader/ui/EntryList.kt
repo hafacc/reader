@@ -73,6 +73,7 @@ import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.LocalLayoutDirection
@@ -96,7 +97,10 @@ import cc.hafa.reader.core.ReaderState
 import cc.hafa.reader.core.Selection
 import cc.hafa.reader.core.ViewTitle
 import cc.hafa.reader.core.articleTopics
+import coil3.SingletonImageLoader
 import coil3.compose.AsyncImage
+import coil3.request.ImageRequest
+import coil3.size.Scale
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
@@ -105,6 +109,7 @@ import java.util.Locale
 import kotlin.math.abs
 import kotlin.math.roundToInt
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
@@ -137,6 +142,7 @@ fun EntryList(snapshot: Snapshot, viewModel: ReaderViewModel, listState: LazyLis
     val latestView by rememberUpdatedState(view)
     val problem = shownFeed?.error ?: ""
     val bannerRows = if (problem.isNotEmpty()) 1 else 0
+    FetchThumbnailsAhead(listState, view.visible, bannerRows)
     LaunchedEffect(reveal, listState) {
         val row = latestView.visible.indexOfFirst { entry -> entry.id == reveal }
         if (row != -1) {
@@ -367,6 +373,43 @@ private fun age(published: Long): String {
     return DateTimeFormatter.ofPattern(pattern, locale).format(moment)
 }
 
+// The list thumbnail's side.
+private val THUMBNAIL_SIZE = 64.dp
+
+/**
+ * Fetches the thumbnails of the rows within two screens of the visible ones, at the
+ * size the cards show them, so they are in memory before they scroll in and stay
+ * there after they scroll out; the web's in `entry-card.svelte`.
+ */
+@Composable
+private fun FetchThumbnailsAhead(listState: LazyListState, entries: List<Entry>, bannerRows: Int) {
+    val context = LocalContext.current
+    val side = with(LocalDensity.current) { THUMBNAIL_SIZE.roundToPx() }
+    val latestEntries by rememberUpdatedState(entries)
+    LaunchedEffect(listState, context, side) {
+        val loader = SingletonImageLoader.get(context)
+        val fetched = mutableSetOf<String>()
+        snapshotFlow {
+            val shown = listState.layoutInfo.visibleItemsInfo
+            val first = shown.firstOrNull()?.index ?: 0
+            val last = shown.lastOrNull()?.index ?: -1
+            val reach = SCREENS_AHEAD * shown.size
+            (first - reach - bannerRows)..(last + reach - bannerRows)
+        }.distinctUntilChanged().collect { rows ->
+            val current = latestEntries
+            for (row in rows.first.coerceAtLeast(0)..rows.last.coerceAtMost(current.lastIndex)) {
+                val address = current[row].imageUrl
+                if (address.isNotEmpty() && fetched.add(address)) {
+                    loader.enqueue(ImageRequest.Builder(context).data(address).size(side).scale(Scale.FILL).build())
+                }
+            }
+        }
+    }
+}
+
+// How many screens of rows past the visible ones have their thumbnails fetched, each way.
+private const val SCREENS_AHEAD = 2
+
 // How far a card must be swiped to mark it on release, and the most it moves.
 private val SWIPE_MARK = 80.dp
 private val SWIPE_LIMIT = 140.dp
@@ -483,7 +526,7 @@ private fun EntryCard(
                             contentScale = ContentScale.Crop,
                             modifier = Modifier
                                 .padding(top = 4.dp)
-                                .size(64.dp)
+                                .size(THUMBNAIL_SIZE)
                                 .clip(RoundedCornerShape(6.dp)),
                         )
                     }

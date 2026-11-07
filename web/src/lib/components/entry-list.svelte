@@ -18,6 +18,7 @@
     touchAxis,
   } from "#lib/gestures.ts";
   import { showsListEnd } from "#lib/list-end.ts";
+  import { Nearby } from "#lib/nearby.ts";
   import { logFailure, type Reader, viewKey } from "#lib/reader.svelte.ts";
   import { articleTopics } from "$shared/filter.ts";
   import DueDot from "./due-dot.svelte";
@@ -61,6 +62,7 @@
   let scroller: HTMLDivElement | undefined = $state();
   let sentinel: HTMLDivElement | undefined = $state();
   let drawn = $state(PAGE);
+  let nearby: Nearby | undefined = $state();
   let startX = 0;
   let startY = 0;
   // which way the touch is going, once it is clear
@@ -123,6 +125,18 @@
       );
       watcher.observe(sentinel);
       return () => watcher.disconnect();
+    }
+  });
+
+  /** Watch which rows are near the screen, so they draw and fetch pictures ahead. */
+  $effect(() => {
+    if (scroller) {
+      const watching = new Nearby(scroller);
+      nearby = watching;
+      return () => {
+        watching.disconnect();
+        nearby = undefined;
+      };
     }
   });
 
@@ -411,6 +425,7 @@
           topics={articleTopics(entry.categories, reader.topicOrder)}
           active={entry.id === reader.currentId}
           filtered={reader.shownFiltered(entry)}
+          {nearby}
           onopen={() => {
             logFailure(reader.open(entry.id));
             onopen();
