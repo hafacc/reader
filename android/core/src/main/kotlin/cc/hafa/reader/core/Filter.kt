@@ -44,7 +44,7 @@ data class ViewSettings(
     /** When not empty, only articles whose title or summary has one of these stay. */
     val onlyWords: List<String> = emptyList(),
     /**
-     * Topics turned off; an article whose topics are all off is hidden. Entries
+     * Topics turned off; an article with any of them is hidden. Entries
      * starting with [SECTION_PREFIX] hold turned-off sections' places instead,
      * which hide every article in them.
      */
@@ -361,8 +361,7 @@ private fun compiledFilter(settings: ViewSettings): (FilterEntry) -> Boolean {
             val hide = matcherFor(settings.hideWords)
             val only = if (settings.onlyWords.isEmpty()) null else matcherFor(settings.onlyWords)
             val filter: (FilterEntry) -> Boolean = { entry ->
-                val topicsOff = entry.categories.isNotEmpty() &&
-                    entry.categories.all { topic -> topicKey(topic) in off }
+                val topicsOff = entry.categories.any { topic -> topicKey(topic) in off }
                 val hidden = hide(entry.title) || hide(entry.summary) ||
                     (places.isNotEmpty() && placeHidden(places, articlePlace(entry)))
                 val kept = only == null || only(entry.title) || only(entry.summary)
