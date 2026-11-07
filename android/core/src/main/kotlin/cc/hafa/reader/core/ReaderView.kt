@@ -25,6 +25,8 @@ data class ReaderState(
     val heldTopics: Map<String, List<String>> = emptyMap(),
     /** Only list articles not yet read, and feeds that have any; one switch for every view. */
     val unreadOnly: Boolean = true,
+    /** List the articles the filters hide too, until the view changes. */
+    val showFiltered: Boolean = false,
     /** Id of the open article; empty for none. */
     val currentId: String = "",
     /** Open articles not to mark read on leaving, since the person took that mark back or marked them unread. */
@@ -158,6 +160,10 @@ data class ReaderView(
     val baseEntries: List<Entry>,
     /** Entries in the current view, in the chosen order, as listed. */
     val visible: List<Entry>,
+    /** Whether the filters hide any article the current list would otherwise show. */
+    val filtersHide: Boolean = false,
+    /** Ids of listed entries the filters hide, shown because filtered articles are showing. */
+    val shownFiltered: Set<String> = emptySet(),
     /** The topics in the current view, commonest first, kept as the same object while they stay the same. */
     val topicOrder: TopicOrder,
     /** The current view's sections and topic groups, kept as the same object while its articles stay the same. */
@@ -571,8 +577,14 @@ fun deriveView(state: ReaderState): ReaderView {
     } else {
         ordered.filter { entry ->
             entry.id == state.currentId ||
-                ((held == null || entry.id in held) && entry.id in kept && !(unreadOnly && entry.read && entry.id !in state.pinned))
+                ((held == null || entry.id in held) && (state.showFiltered || entry.id in kept) && !(unreadOnly && entry.read && entry.id !in state.pinned))
         }
+    }
+    val filtersHide = baseEntries.any { entry -> entry.id !in kept && !(unreadOnly && entry.read && entry.id !in state.pinned) }
+    val shownFiltered = if (state.showFiltered) {
+        visible.mapNotNullTo(HashSet()) { entry -> entry.id.takeIf { id -> id !in kept } }
+    } else {
+        emptySet()
     }
     val counts = unreadCounts(state.entries, state.feeds, state.settings)
     val unread = counts.byFeed
@@ -599,6 +611,8 @@ fun deriveView(state: ReaderState): ReaderView {
         viewSettings = viewSettings,
         baseEntries = baseEntries,
         visible = visible,
+        filtersHide = filtersHide,
+        shownFiltered = shownFiltered,
         topicOrder = topicOrderOf(baseEntries),
         filters = filtersOf(selection, baseEntries),
         viewTitle = viewTitle,

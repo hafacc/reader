@@ -445,6 +445,8 @@ export class Reader {
   heldTopics = $state<Record<string, string[]>>({});
   /** Only list articles not yet read, and feeds that have any; one switch for every view. */
   unreadOnly = $state(true);
+  /** List the articles the filters hide too, until the view changes. */
+  showFiltered = $state(false);
   /** Font for article text and titles on this browser. */
   readingFont = $state<ReadingFont>(storedReadingFont());
   /** Id of the open entry; empty when none is open. */
@@ -612,6 +614,19 @@ export class Reader {
     return ids;
   });
 
+  /** Whether the filters hide any article the current list would otherwise show. */
+  filtersHide = $derived.by(() => {
+    const unreadOnly = this.unreadOnly && this.selection.kind !== "starred";
+    const { kept, pinned } = this;
+    return this.baseEntries.some(
+      (entry) =>
+        !(
+          kept.has(entry.id) ||
+          (unreadOnly && entry.read && !pinned[entry.id])
+        ),
+    );
+  });
+
   /** Entries in the current view, in the chosen order. */
   visible = $derived.by(() => {
     const frozen = this.frozenList;
@@ -624,12 +639,12 @@ export class Reader {
       });
     } else {
       const unreadOnly = this.unreadOnly && this.selection.kind !== "starred";
-      const { kept, pinned, currentId, heldEntries } = this;
+      const { kept, pinned, currentId, heldEntries, showFiltered } = this;
       shown = this.ordered.filter(
         (entry) =>
           entry.id === currentId ||
           ((heldEntries === undefined || heldEntries.has(entry.id)) &&
-            kept.has(entry.id) &&
+            (showFiltered || kept.has(entry.id)) &&
             !(unreadOnly && entry.read && !pinned[entry.id])),
       );
     }
@@ -1591,6 +1606,20 @@ export class Reader {
     return this.wordCounts.get(word) ?? 0;
   }
 
+  /** List the articles the filters hide too, or hide them again. */
+  setShowFiltered(next: boolean): void {
+    this.showFiltered = next;
+    this.frozenList = undefined;
+    if (this.heldEntries !== undefined) {
+      this.settleList();
+    }
+  }
+
+  /** Whether the filters hide an entry the list shows anyway because filtered articles are showing. */
+  shownFiltered(entry: Entry): boolean {
+    return this.showFiltered && !this.kept.has(entry.id);
+  }
+
   /** Turn the unread-only switch on or off, and remember it. */
   setUnreadOnly(next: boolean): void {
     this.unreadOnly = next;
@@ -1627,6 +1656,7 @@ export class Reader {
       }
       this.pinned = {};
       this.heldTopics = {};
+      this.showFiltered = false;
       this.frozenList = undefined;
       if (this.heldEntries !== undefined) {
         this.settleList();

@@ -1111,6 +1111,23 @@ class ReaderModelTest {
     }
 
     @Test
+    fun `filtered articles show until the view changes`() = runTest {
+        val model = model()
+        model.addTagged()
+        assertFalse(model.view().filtersHide)
+        model.toggleTopic(listOf(taggedId), "Politics", fromArticle = false)
+        assertTrue(model.view().filtersHide)
+        assertEquals(listOf("sports story"), model.titles())
+        model.setShowFiltered(true)
+        assertEquals(listOf("politics story", "sports story"), model.titles().sorted())
+        val politics = model.view().visible.first { entry -> entry.title == "politics story" }
+        assertEquals(setOf(politics.id), model.view().shownFiltered)
+        model.select(Selection.FeedView(taggedId))
+        assertFalse(model.state.value.showFiltered)
+        assertEquals(listOf("sports story"), model.titles())
+    }
+
+    @Test
     fun `held topics end with a view change, the unread switch or a toggle from settings`() = runTest {
         val model = model()
         model.addTagged()

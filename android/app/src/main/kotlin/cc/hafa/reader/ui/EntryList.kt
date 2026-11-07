@@ -34,6 +34,7 @@ import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.outlined.Check
 import androidx.compose.material.icons.outlined.DoneAll
 import androidx.compose.material.icons.outlined.ErrorOutline
+import androidx.compose.material.icons.outlined.FilterAlt
 import androidx.compose.material.icons.outlined.StarOutline
 import androidx.compose.material.icons.outlined.Tune
 import androidx.compose.material.icons.outlined.UnfoldMore
@@ -42,6 +43,8 @@ import androidx.compose.material.icons.outlined.VisibilityOff
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButtonDefaults
+import androidx.compose.material3.IconToggleButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.pulltorefresh.PullToRefreshDefaults
@@ -61,6 +64,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.graphicsLayer
@@ -181,6 +185,19 @@ fun EntryList(snapshot: Snapshot, viewModel: ReaderViewModel, listState: LazyLis
                     Box(Modifier.weight(1f), contentAlignment = Alignment.CenterStart) {
                         ViewButton(viewTitleText(view.viewTitle), state, onMenu)
                     }
+                    if (view.filtersHide) {
+                        IconToggleButton(
+                            checked = state.showFiltered,
+                            onCheckedChange = model::setShowFiltered,
+                            colors = IconButtonDefaults.iconToggleButtonColors(
+                                contentColor = colors.muted,
+                                checkedContentColor = colors.page,
+                                checkedContainerColor = colors.accent,
+                            ),
+                        ) {
+                            Icon(Icons.Outlined.FilterAlt, contentDescription = stringResource(R.string.show_filtered))
+                        }
+                    }
                     IconAction(
                         if (state.unreadOnly) Icons.Outlined.VisibilityOff else Icons.Outlined.Visibility,
                         stringResource(R.string.unread_only),
@@ -244,6 +261,7 @@ fun EntryList(snapshot: Snapshot, viewModel: ReaderViewModel, listState: LazyLis
                             source = feedTitles[entry.feedId] ?: "",
                             topics = remember(entry.categories, view.topicOrder) { articleTopics(entry.categories, view.topicOrder) },
                             active = entry.id == state.currentId,
+                            filtered = entry.id in view.shownFiltered,
                             onOpen = { viewModel.openEntry(entry.id) },
                             onToggleRead = { model.toggleReadFor(entry.id) },
                             onStar = { model.toggleStarFor(entry.id) },
@@ -353,6 +371,9 @@ private fun age(published: Long): String {
 private val SWIPE_MARK = 80.dp
 private val SWIPE_LIMIT = 140.dp
 
+// How faint an article the filters hide shows while filtered articles are showing.
+private const val FILTERED_ALPHA = 0.55f
+
 /** One article in the list; swiping it sideways past a mark and letting go marks it read or unread. */
 @Composable
 private fun EntryCard(
@@ -361,6 +382,7 @@ private fun EntryCard(
     source: String,
     topics: List<String>,
     active: Boolean,
+    filtered: Boolean,
     onOpen: () -> Unit,
     onToggleRead: () -> Unit,
     onStar: () -> Unit,
@@ -421,6 +443,7 @@ private fun EntryCard(
                     .offset { IntOffset(swipeOffset.roundToInt(), 0) }
                     .fillMaxWidth()
                     .background(if (active) colors.accentSoft else colors.page)
+                    .alpha(if (filtered) FILTERED_ALPHA else 1f)
                     .clickable(onClick = onOpen)
                     .padding(start = 16.dp, end = 4.dp, top = 14.dp, bottom = 2.dp),
             ) {

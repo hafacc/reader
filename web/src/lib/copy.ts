@@ -51,6 +51,7 @@ export const copy = {
   /** The OPML export could not be saved. */
   exportFailed: "Could not save the file.",
   unreadOnly: "Unread only",
+  showFiltered: "Show filtered articles",
   emptyTitle: "Add your first feed",
   emptyBody:
     "Paste a feed address, search for a topic, or import a list from another reader.",
