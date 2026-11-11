@@ -4,7 +4,7 @@
   import Undo2 from "@lucide/svelte/icons/undo-2";
   import { copy } from "#lib/copy.ts";
   import { SIDEWAYS_RATIO, startsAtEdge } from "#lib/gestures.ts";
-  import type { Nearby } from "#lib/nearby.ts";
+  import { fetchedPictures, type Nearby } from "#lib/nearby.ts";
   import type { Entry } from "#lib/types.ts";
 
   const {
@@ -40,14 +40,18 @@
   const SWIPE_START = 12;
   const SWIPE_LIMIT = 140;
 
-  // whether the card is within reach of the screen, and whether it ever was, so its picture stays once fetched
+  // whether the card is within reach of the screen
   let near = $state(false);
-  let wasNear = $state(false);
+  const showPicture = $derived(
+    nearby === undefined || fetchedPictures.has(entry.imageUrl),
+  );
 
   function watchNear(row: HTMLElement): (() => void) | undefined {
     return nearby?.watch(row, (next) => {
       near = next;
-      wasNear ||= next;
+      if (next && entry.imageUrl) {
+        fetchedPictures.add(entry.imageUrl);
+      }
     });
   }
 
@@ -196,10 +200,10 @@
       </span>
       {#if entry.imageUrl}
         <img
-          src={nearby === undefined || wasNear ? entry.imageUrl : undefined}
+          src={showPicture ? entry.imageUrl : undefined}
           alt=""
           referrerpolicy="no-referrer"
-          loading={nearby === undefined ? "lazy" : "eager"}
+          loading={near ? "eager" : "lazy"}
           class="size-16 shrink-0 self-start rounded-md object-cover"
         >
       {/if}

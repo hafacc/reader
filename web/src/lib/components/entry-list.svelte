@@ -18,7 +18,7 @@
     touchAxis,
   } from "#lib/gestures.ts";
   import { showsListEnd } from "#lib/list-end.ts";
-  import { Nearby } from "#lib/nearby.ts";
+  import { DRAW_MARGIN, Nearby } from "#lib/nearby.ts";
   import { logFailure, type Reader, viewKey } from "#lib/reader.svelte.ts";
   import { articleTopics } from "$shared/filter.ts";
   import DueDot from "./due-dot.svelte";
@@ -121,7 +121,7 @@
             drawn += PAGE;
           }
         },
-        { root: scroller, rootMargin: "800px" },
+        { root: scroller, rootMargin: DRAW_MARGIN },
       );
       watcher.observe(sentinel);
       return () => watcher.disconnect();

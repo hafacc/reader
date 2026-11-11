@@ -362,31 +362,32 @@ private val THUMBNAIL_SIZE = 64.dp
 
 /**
  * Fetches the thumbnails of the rows within two screens of the visible ones, at the
- * size the cards show them, so they are in memory before they scroll in and stay
- * there after they scroll out; the web's in `entry-card.svelte`.
+ * size the cards show them, so they are in memory before they scroll in; the web's
+ * is `nearby.ts`.
  */
 @Composable
 private fun FetchThumbnailsAhead(listState: LazyListState, entries: List<Entry>, bannerRows: Int) {
     val context = LocalContext.current
     val side = with(LocalDensity.current) { THUMBNAIL_SIZE.roundToPx() }
     val latestEntries by rememberUpdatedState(entries)
+    val latestBannerRows by rememberUpdatedState(bannerRows)
     LaunchedEffect(listState, context, side) {
         val loader = SingletonImageLoader.get(context)
-        val fetched = mutableSetOf<String>()
+        var near = emptySet<String>()
         snapshotFlow {
             val shown = listState.layoutInfo.visibleItemsInfo
             val first = shown.firstOrNull()?.index ?: 0
             val last = shown.lastOrNull()?.index ?: -1
             val reach = SCREENS_AHEAD * shown.size
-            (first - reach - bannerRows)..(last + reach - bannerRows)
-        }.distinctUntilChanged().collect { rows ->
-            val current = latestEntries
-            for (row in rows.first.coerceAtLeast(0)..rows.last.coerceAtMost(current.lastIndex)) {
-                val address = current[row].imageUrl
-                if (address.isNotEmpty() && fetched.add(address)) {
-                    loader.enqueue(ImageRequest.Builder(context).data(address).size(side).scale(Scale.FILL).build())
-                }
+            Pair((first - reach - latestBannerRows)..(last + reach - latestBannerRows), latestEntries)
+        }.distinctUntilChanged().collect { (rows, current) ->
+            val addresses = (rows.first.coerceAtLeast(0)..rows.last.coerceAtMost(current.lastIndex))
+                .mapNotNullTo(mutableSetOf()) { row -> current[row].imageUrl.ifEmpty { null } }
+            // Only the ones that just came near; one still in memory comes back from there at once.
+            for (address in addresses - near) {
+                loader.enqueue(ImageRequest.Builder(context).data(address).size(side).scale(Scale.FILL).build())
             }
+            near = addresses
         }
     }
 }
