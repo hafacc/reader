@@ -39,8 +39,6 @@ import androidx.compose.material.icons.outlined.VisibilityOff
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButtonDefaults
-import androidx.compose.material3.IconToggleButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SwipeToDismissBox
 import androidx.compose.material3.SwipeToDismissBoxValue
@@ -184,23 +182,17 @@ fun EntryList(snapshot: Snapshot, viewModel: ReaderViewModel, listState: LazyLis
                         ViewButton(viewTitleText(view.viewTitle), state, onMenu)
                     }
                     if (view.filtersHide) {
-                        IconToggleButton(
-                            checked = state.showFiltered,
-                            onCheckedChange = model::setShowFiltered,
-                            colors = IconButtonDefaults.iconToggleButtonColors(
-                                contentColor = colors.muted,
-                                checkedContentColor = colors.page,
-                                checkedContainerColor = colors.accent,
-                            ),
-                        ) {
-                            Icon(Icons.Outlined.FilterAlt, contentDescription = stringResource(R.string.show_filtered))
-                        }
+                        IconAction(
+                            Icons.Outlined.FilterAlt,
+                            stringResource(R.string.show_filtered),
+                            { model.setShowFiltered(!state.showFiltered) },
+                            pressed = state.showFiltered,
+                        )
                     }
                     IconAction(
                         if (state.unreadOnly) Icons.Outlined.VisibilityOff else Icons.Outlined.Visibility,
                         stringResource(R.string.unread_only),
                         { model.setUnreadOnly(!state.unreadOnly) },
-                        tint = if (state.unreadOnly) colors.accent else colors.muted,
                         pressed = state.unreadOnly,
                     )
                     IconAction(Icons.Outlined.Tune, stringResource(R.string.settings), viewModel::toggleSettings)
@@ -527,7 +519,7 @@ private fun EntryCard(
                         if (entry.starred) Icons.Filled.Star else Icons.Outlined.StarOutline,
                         stringResource(R.string.star),
                         onStar,
-                        tint = if (entry.starred) colors.star else colors.muted,
+                        checkedTint = colors.star,
                         iconSize = 20.dp,
                         pressed = entry.starred,
                     )

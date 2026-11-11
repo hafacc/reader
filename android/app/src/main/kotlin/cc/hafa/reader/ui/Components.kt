@@ -104,7 +104,8 @@ private const val TOO_MANY_REQUESTS = 429
 
 /**
  * An icon button labeled for screen readers; a toggle that reads as on or off
- * when [pressed] is given. [dotted] puts a due dot on the icon's corner (see
+ * when [pressed] is given, tinted [checkedTint] while on (Material's default
+ * when unspecified). [dotted] puts a due dot on the icon's corner (see
  * [WithDueDot]) and has screen readers say a refresh is suggested. Unless
  * [enabled], it is dimmed and does nothing, and screen readers say so.
  */
@@ -116,6 +117,7 @@ fun IconAction(
     tint: Color = ReaderTheme.colors.muted,
     iconSize: Dp = 24.dp,
     pressed: Boolean? = null,
+    checkedTint: Color = Color.Unspecified,
     dotted: Boolean = false,
     enabled: Boolean = true,
 ) {
@@ -140,7 +142,7 @@ fun IconAction(
             onCheckedChange = { onClick() },
             modifier = announced,
             enabled = enabled,
-            colors = IconButtonDefaults.iconToggleButtonColors(contentColor = tint, checkedContentColor = tint),
+            colors = IconButtonDefaults.iconToggleButtonColors(contentColor = tint, checkedContentColor = checkedTint),
         ) {
             WithDueDot(dotted) { Icon(icon, contentDescription = label, modifier = Modifier.size(iconSize)) }
         }

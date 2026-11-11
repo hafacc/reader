@@ -465,7 +465,7 @@ private fun RowScope.ArticleBarActions(entry: Entry, read: Boolean, viewModel: R
         if (entry.starred) Icons.Filled.Star else Icons.Outlined.StarOutline,
         stringResource(R.string.star),
         viewModel.model::toggleStar,
-        tint = if (entry.starred) colors.star else colors.muted,
+        checkedTint = colors.star,
         pressed = entry.starred,
     )
     IconAction(
