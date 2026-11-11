@@ -323,9 +323,9 @@
     {#if reader.filtersHide}
       <button
         type="button"
-        class="grid size-12 place-items-center rounded-md md:size-8 {reader.showFiltered
-          ? "bg-accent text-page"
-          : "text-muted hover:bg-side"}"
+        class="grid size-12 place-items-center rounded-md md:size-8 hover:bg-side {reader.showFiltered
+          ? "text-accent"
+          : "text-muted"}"
         aria-label={copy.showFiltered}
         aria-pressed={reader.showFiltered}
         title={copy.showFiltered}
