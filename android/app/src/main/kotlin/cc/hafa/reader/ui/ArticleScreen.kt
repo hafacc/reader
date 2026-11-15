@@ -56,7 +56,9 @@ import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
@@ -306,6 +308,7 @@ private fun ArticlePager(
     modifier: Modifier,
 ) {
     val pagerState = rememberPagerState(initialPage = index) { rows.size }
+    val savesData = remember(viewModel) { viewModel.model.savesData() }
     val latestRows by rememberUpdatedState(rows)
     LaunchedEffect(pagerState) {
         var previous = pagerState.settledPage
@@ -332,13 +335,21 @@ private fun ArticlePager(
             .nestedScroll(sideways)
             .graphicsLayer { translationX = sideways.offset },
         pageSpacing = PAGE_GAP,
+        // The articles on either side are laid out ahead, pictures and all, so swiping shows them whole.
+        beyondViewportPageCount = 1,
         key = { page -> rows[page].id },
     ) { page ->
         // Fading as it slides, so the article coming in reads as taking the place of the one going out.
         val pageModifier = Modifier
             .fillMaxSize()
             .graphicsLayer { alpha = pageAlpha(pagerState.getOffsetDistanceInPages(page)) }
-        ArticlePage(rows[page], snapshot, viewModel, padding, scrollBehavior.takeIf { page == pagerState.currentPage }, pageModifier)
+        // While saving data, an article drawn ahead shows only pictures already here until it comes into view.
+        val inView by remember(page) {
+            derivedStateOf { pagerState.layoutInfo.visiblePagesInfo.any { visible -> visible.index == page } }
+        }
+        CompositionLocalProvider(LocalStoredPicturesOnly provides (savesData && !inView)) {
+            ArticlePage(rows[page], snapshot, viewModel, padding, scrollBehavior.takeIf { page == pagerState.currentPage }, pageModifier)
+        }
     }
 }
 
