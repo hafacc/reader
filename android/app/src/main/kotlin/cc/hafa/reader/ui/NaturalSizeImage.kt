@@ -2,6 +2,7 @@ package cc.hafa.reader.ui
 
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -12,6 +13,12 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import cc.hafa.reader.core.PictureChoice
 import coil3.compose.AsyncImage
+import coil3.compose.LocalPlatformContext
+import coil3.request.CachePolicy
+import coil3.request.ImageRequest
+
+/** Whether pictures come only from what this device already holds, as on an article drawn ahead while saving data. */
+val LocalStoredPicturesOnly = compositionLocalOf { false }
 
 /**
  * A picture from the web shown no wider than a browser would show it, so a
@@ -32,8 +39,16 @@ fun NaturalSizeImage(
     var maxWidth by remember(picture) {
         mutableStateOf(if (declaredWidth > 0) picture.displayWidth(0.0).dp else Dp.Unspecified)
     }
+    val storedOnly = LocalStoredPicturesOnly.current
+    val context = LocalPlatformContext.current
+    val request = remember(model, storedOnly, context) {
+        ImageRequest.Builder(context)
+            .data(model)
+            .networkCachePolicy(if (storedOnly) CachePolicy.DISABLED else CachePolicy.ENABLED)
+            .build()
+    }
     AsyncImage(
-        model = model,
+        model = request,
         contentDescription = contentDescription,
         contentScale = contentScale,
         onSuccess = { state ->

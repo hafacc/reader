@@ -23,8 +23,8 @@ android {
         applicationId = "cc.hafa.reader"
         minSdk = 26
         targetSdk = 37
-        versionCode = 9
-        versionName = "0.2.0"
+        versionCode = 10
+        versionName = "0.2.1"
     }
 
     // storeFile, storePassword, keyAlias and keyPassword come from android/keystore.properties
