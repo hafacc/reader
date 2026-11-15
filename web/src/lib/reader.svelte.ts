@@ -56,6 +56,7 @@ import {
 import { parseOpml } from "./opml.ts";
 import { compareEntries } from "./order.ts";
 import {
+  type AheadPicture,
   aheadPictures,
   type Heading,
   neighborsOf,
@@ -453,6 +454,8 @@ export class Reader {
   currentId = $state("");
   /** Sanitized HTML of the open entry. */
   body = $state("");
+  /** Sanitized HTML of the open entry's neighbors, by entry id, ready before either is opened. */
+  aheadBodies = $state<Record<string, string>>({});
   /** Whether stored data has been read. */
   loaded = $state(false);
   /** Whether the extension has been looked for at least once. */
@@ -1761,7 +1764,7 @@ export class Reader {
   async open(id: string, heading: Heading = 1): Promise<void> {
     const previous = this.currentId === id ? undefined : this.current;
     this.currentId = id;
-    this.body = "";
+    this.body = this.aheadBodies[id] ?? "";
     this.neighborPictures.clear();
     if (previous) {
       await this.leave(previous);
@@ -1774,7 +1777,7 @@ export class Reader {
       }
       if (this.currentId === id) {
         this.body = this.rendered(entry, html);
-        logFailure(this.fetchNeighborPictures(id, heading));
+        logFailure(this.prepareNeighbors(id, heading));
       }
     }
   }
@@ -1789,15 +1792,12 @@ export class Reader {
   }
 
   /**
-   * Fetch ahead the first pictures of the entries on either side of the open
-   * one. The body of the one ahead, in the way the reader is moving, is
+   * Ready the bodies and first pictures of the entries on either side of the
+   * open one. The body of the one ahead, in the way the reader is moving, is
    * downloaded and kept when the device lacks it, signed in and not saving
    * data; the one behind uses only a body on this device.
    */
-  private async fetchNeighborPictures(
-    id: string,
-    heading: Heading,
-  ): Promise<void> {
+  private async prepareNeighbors(id: string, heading: Heading): Promise<void> {
     const { ahead, behind } = neighborsOf(this.visible, id, heading);
     const download = this.sync.signedIn && !savingData();
     const neighbors = [ahead, behind];
@@ -1806,16 +1806,21 @@ export class Reader {
       this.neighborBody(behind, false),
     ]);
     if (this.currentId === id) {
-      this.neighborPictures.replace(
-        neighbors.flatMap((neighbor, position) =>
-          neighbor === undefined
-            ? []
-            : aheadPictures(
-                neighbor.imageUrl,
-                this.rendered(neighbor, bodies[position] ?? ""),
-              ),
-        ),
-      );
+      const ready: Record<string, string> = {};
+      const pictures: AheadPicture[] = [];
+      for (const [position, neighbor] of neighbors.entries()) {
+        if (neighbor !== undefined) {
+          const html = bodies[position] ?? "";
+          const shown = this.rendered(neighbor, html);
+          // a summary that a downloaded body will replace is not shown ahead, so the page does not change under the reader
+          if (html !== "" || neighbor.bodyHash === "") {
+            ready[neighbor.id] = shown;
+          }
+          pictures.push(...aheadPictures(neighbor.imageUrl, shown));
+        }
+      }
+      this.aheadBodies = ready;
+      this.neighborPictures.replace(pictures);
     }
   }
 
@@ -1863,6 +1868,7 @@ export class Reader {
     const previous = this.current;
     this.currentId = "";
     this.body = "";
+    this.aheadBodies = {};
     this.neighborPictures.clear();
     if (previous) {
       await this.leave(previous);
@@ -2063,6 +2069,7 @@ export class Reader {
     this.keptUnread.clear();
     this.currentId = "";
     this.body = "";
+    this.aheadBodies = {};
     this.neighborPictures.clear();
     this.feeds = [];
     this.entries = [];
