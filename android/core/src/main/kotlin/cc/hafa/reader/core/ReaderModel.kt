@@ -209,6 +209,9 @@ class ReaderModel(
     /** Everything the reader holds. */
     val state: StateFlow<ReaderState> = mutableState.asStateFlow()
 
+    /** Whether the device asks to save data, so no picture is fetched ahead. */
+    fun savesData(): Boolean = savingData()
+
     private val loadLock = Mutex()
     private val writes = Channel<suspend () -> Unit>(Channel.UNLIMITED)
     private val iconsTried: MutableSet<String> = ConcurrentHashMap.newKeySet()
