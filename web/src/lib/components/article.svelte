@@ -21,7 +21,8 @@
   } from "#lib/gestures.ts";
   import { isNarrow } from "#lib/layout.ts";
   import { logFailure, type Reader } from "#lib/reader.svelte.ts";
-  import { mentionsUrl } from "#lib/sanitize.ts";
+  import type { Entry } from "#lib/types.ts";
+  import ArticlePage from "./article-page.svelte";
   import FilterPopover from "./filter-popover.svelte";
   import FilterSheet from "./filter-sheet.svelte";
   import PullMarker from "./pull-marker.svelte";
@@ -40,6 +41,8 @@
   const COPIED_MS = 2000;
   // how long an article takes to slide off or on, as Android's pager
   const SLIDE_MS = 200;
+  // the space between an article and the ones drawn on either side, as Android's pager
+  const PAGE_GAP = 16;
   // how much an article follows the finger when the list no longer holds it
   const END_RESISTANCE = 0.25;
 
@@ -58,50 +61,6 @@
   // the filters open over the article: a sheet on a phone, a box below the button on a wide screen
   let filtersOpen = $state<"none" | "sheet" | "box">("none");
   let filterButton: HTMLButtonElement | undefined = $state();
-  const showImage = $derived(
-    entry !== undefined &&
-      entry.imageUrl !== "" &&
-      !mentionsUrl(reader.body, entry.imageUrl),
-  );
-  // the lead picture's own width once loaded, so a small picture is not stretched
-  let leadSize = $state({ address: "", width: 0 });
-  const leadMaxWidth = $derived(
-    leadSize.address !== "" &&
-      leadSize.address === entry?.imageUrl &&
-      leadSize.width > 0
-      ? `${leadSize.width}px`
-      : undefined,
-  );
-
-  function measureLead(image: HTMLImageElement): () => void {
-    function measure(): void {
-      leadSize = {
-        address: image.getAttribute("src") ?? "",
-        width: image.naturalWidth,
-      };
-    }
-    // a cached picture may have loaded before this runs
-    if (image.complete) {
-      measure();
-    }
-    image.addEventListener("load", measure);
-    return () => image.removeEventListener("load", measure);
-  }
-  const byline = $derived(
-    [
-      reader.feeds.find((feed) => feed.id === entry?.feedId)?.title ?? "",
-      entry?.author ?? "",
-      entry && entry.dated !== false
-        ? new Date(entry.published).toLocaleString([], {
-            dateStyle: "medium",
-            timeStyle: "short",
-            hourCycle: "h23",
-          })
-        : "",
-    ]
-      .filter((part) => part !== "")
-      .join(" · "),
-  );
   const canShare = typeof navigator !== "undefined" && "share" in navigator;
 
   let copied = $state(false);
@@ -138,6 +97,41 @@
     reader.visible.findIndex((row) => row.id === reader.currentId),
   );
 
+  /** The open article and the ones on either side, with their bodies when ready: `slot` -1 before it, 1 after. */
+  const pages = $derived.by(() => {
+    const shown: { entry: Entry; slot: number; body: string }[] = [];
+    if (entry) {
+      shown.push({ entry, slot: 0, body: reader.body });
+      if (index !== -1) {
+        for (const slot of [-1, 1]) {
+          const neighbor = reader.visible[index + slot];
+          if (neighbor) {
+            shown.push({
+              entry: neighbor,
+              slot,
+              body: reader.aheadBodies[neighbor.id] ?? "",
+            });
+          }
+        }
+      }
+    }
+    return shown;
+  });
+
+  /** Where the article in `slot` sits: beside the open one, following the finger with it. */
+  function pageTransform(slot: number): string | undefined {
+    let transform: string | undefined;
+    if (slot === 0) {
+      transform =
+        offset === 0 && shift === 0
+          ? undefined
+          : `translate(${offset}px, ${shift}px)`;
+    } else {
+      transform = `translateX(calc(${slot * 100}% + ${slot * PAGE_GAP + offset}px))`;
+    }
+    return transform;
+  }
+
   /** Whether the article is scrolled as far up as it goes. */
   function atTop(box: HTMLElement): boolean {
     return box.scrollTop <= 0;
@@ -159,13 +153,13 @@
   }
 
   /**
-   * Slide the open article off, then open the next or previous one and slide
-   * it on from the other side while its text loads, or, past either end of
-   * the list, close it. Nothing happens when the article changed or closed
-   * during the slide, such as by Back.
+   * Slide the open article off and the next or previous one on in its place,
+   * then open that one, or, past either end of the list, close it. Nothing
+   * happens when the article changed or closed during the slide, such as by
+   * Back.
    */
   async function slideTo(delta: number, closes: boolean): Promise<void> {
-    const width = scroller?.clientWidth ?? globalThis.innerWidth;
+    const width = (scroller?.offsetWidth ?? globalThis.innerWidth) + PAGE_GAP;
     const startId = reader.currentId;
     if (reducedMotion()) {
       offset = 0;
@@ -179,15 +173,9 @@
         await onstep(delta);
         offset = 0;
       } else if (reader.currentId === startId) {
-        // the next article is chosen at once; its text comes in while it slides on
+        // the article slid on becomes the open one where it stands, so nothing moves
         const stepping = onstep(delta);
-        offset = delta * width;
-        // let the new article be drawn off to the side before it slides on
-        await wait(16);
-        sliding = true;
         offset = 0;
-        await wait(SLIDE_MS);
-        sliding = false;
         await stepping;
       } else {
         offset = 0;
@@ -462,8 +450,7 @@
     {/if}
   </header>
   <div
-    class="min-h-0 flex-1 touch-pan-y touch-pinch-zoom overflow-x-hidden overflow-y-auto px-5 py-8 md:px-12 md:py-10"
-    bind:this={scroller}
+    class="relative min-h-0 flex-1 overflow-hidden"
     role="presentation"
     ontouchstart={onStart}
     {@attach listenMoves}
@@ -471,129 +458,36 @@
     ontouchcancel={onEnd}
   >
     {#if entry}
-      <div
-        class="mx-auto flex max-w-[44rem] flex-col gap-5 {sliding
-          ? "transition-transform duration-200 ease-out"
-          : ""}"
-        style:transform={offset === 0 && shift === 0
-          ? undefined
-          : `translate(${offset}px, ${shift}px)`}
-      >
-        <div class="flex flex-col gap-3">
-          <h1
-            class="font-reading text-3xl leading-tight font-bold text-balance"
-          >
-            {#if entry.url}
-              <a
-                href={entry.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                class="hover:underline"
-                >{entry.title}</a
-              >
-            {:else}
-              {entry.title}
-            {/if}
-          </h1>
-          <div class="flex items-center justify-between gap-3">
-            <p class="text-muted min-w-0 font-mono text-xs">{byline}</p>
-            <div class="relative -my-2 -mr-2 hidden shrink-0 md:flex">
-              {#if hasFilters}
-                <button
-                  type="button"
-                  class="relative grid size-8 place-items-center rounded-md hover:bg-side hover:text-ink {filtersOpen ===
-                  "box"
-                    ? "bg-accent-soft text-accent"
-                    : "text-muted"}"
-                  aria-label={filtersOff ? copy.filtersSomeOff : copy.filters}
-                  aria-expanded={filtersOpen === "box"}
-                  title={copy.filters}
-                  bind:this={filterButton}
-                  onclick={() => {
-                    filtersOpen = filtersOpen === "box" ? "none" : "box";
-                  }}
-                >
-                  <ListFilter class="size-4" />
-                  {#if filtersOff}
-                    <span
-                      class="bg-accent ring-page pointer-events-none absolute top-0.5 right-0.5 size-2 rounded-full ring-2"
-                      aria-hidden="true"
-                    ></span>
-                  {/if}
-                </button>
-                {#if filtersOpen === "box"}
-                  <FilterPopover
-                    {reader}
-                    {filters}
-                    anchor={filterButton}
-                    onclose={closeFilters}
-                  />
-                {/if}
-              {/if}
-              <button
-                type="button"
-                class="text-muted hover:bg-side hover:text-ink grid size-8 place-items-center rounded-md"
-                aria-label={copy.star}
-                aria-pressed={entry.starred}
-                title={copy.star}
-                onclick={() => logFailure(reader.toggleStar())}
-              >
-                <Star
-                  class="size-4 {entry.starred ? "fill-star text-star" : ""}"
-                />
-              </button>
-              <button
-                type="button"
-                class="text-muted hover:bg-side hover:text-ink grid size-8 place-items-center rounded-md"
-                aria-label={shownRead ? copy.markUnread : copy.markRead}
-                title={shownRead ? copy.markUnread : copy.markRead}
-                onclick={() => logFailure(reader.toggleRead())}
-              >
-                {#if shownRead}
-                  <Undo2 class="size-4" />
-                {:else}
-                  <Check class="size-4" />
-                {/if}
-              </button>
-            </div>
+      <!-- the articles on either side are drawn ahead, pictures and all, so a swipe brings them on whole -->
+      {#each pages as page (page.entry.id)}
+        <div
+          class="absolute inset-0 touch-pan-y touch-pinch-zoom overflow-x-hidden px-5 py-8 md:px-12 md:py-10 {page.slot ===
+          0
+            ? "overflow-y-auto"
+            : "overflow-y-hidden"} {sliding
+            ? "transition-transform duration-200 ease-out"
+            : ""}"
+          style:transform={pageTransform(page.slot)}
+          inert={page.slot !== 0}
+          aria-hidden={page.slot === 0 ? undefined : "true"}
+          {@attach (box) => {
+            if (page.slot === 0) {
+              scroller = box;
+            }
+          }}
+        >
+          <div class="mx-auto flex max-w-[44rem] flex-col gap-5">
+            <ArticlePage
+              {reader}
+              entry={page.entry}
+              body={page.body}
+              ahead={page.slot !== 0}
+              actions={page.slot === 0 ? actions : undefined}
+              footer={page.slot === 0 ? footer : undefined}
+            />
           </div>
         </div>
-        {#if showImage}
-          <img
-            src={entry.imageUrl}
-            alt=""
-            referrerpolicy="no-referrer"
-            class="max-h-96 w-full rounded-lg object-cover"
-            style:max-width={leadMaxWidth}
-            {@attach measureLead}
-          >
-        {/if}
-        <div class="prose font-reading prose-img:rounded max-w-none">
-          <!-- biome-ignore lint/nursery/noSvelteAtHtmlTags: the body is sanitized in the reader -->
-          {@html reader.body}
-        </div>
-        <div class="hidden flex-wrap gap-2 text-xs md:flex">
-          {#if entry.url}
-            <a
-              class="border-line hover:bg-side flex items-center gap-1.5 rounded-lg border px-3 py-2"
-              href={entry.url}
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              <ExternalLink class="size-3.5" />
-              {copy.openOriginal}
-            </a>
-            <button
-              type="button"
-              class="border-line hover:bg-side flex items-center gap-1.5 rounded-lg border px-3 py-2"
-              onclick={share}
-            >
-              <Share class="size-3.5" />
-              {copied ? copy.copied : copy.share}
-            </button>
-          {/if}
-        </div>
-      </div>
+      {/each}
     {:else}
       <div
         class="text-muted flex h-full min-h-40 flex-col items-center justify-center gap-4 p-8 text-sm"
@@ -628,3 +522,85 @@
     <FilterSheet {reader} {filters} onclose={closeFilters} />
   {/if}
 </article>
+
+{#snippet actions(entry: Entry)}
+  {#if hasFilters}
+    <button
+      type="button"
+      class="relative grid size-8 place-items-center rounded-md hover:bg-side hover:text-ink {filtersOpen ===
+      "box"
+        ? "bg-accent-soft text-accent"
+        : "text-muted"}"
+      aria-label={filtersOff ? copy.filtersSomeOff : copy.filters}
+      aria-expanded={filtersOpen === "box"}
+      title={copy.filters}
+      bind:this={filterButton}
+      onclick={() => {
+        filtersOpen = filtersOpen === "box" ? "none" : "box";
+      }}
+    >
+      <ListFilter class="size-4" />
+      {#if filtersOff}
+        <span
+          class="bg-accent ring-page pointer-events-none absolute top-0.5 right-0.5 size-2 rounded-full ring-2"
+          aria-hidden="true"
+        ></span>
+      {/if}
+    </button>
+    {#if filtersOpen === "box"}
+      <FilterPopover
+        {reader}
+        {filters}
+        anchor={filterButton}
+        onclose={closeFilters}
+      />
+    {/if}
+  {/if}
+  <button
+    type="button"
+    class="text-muted hover:bg-side hover:text-ink grid size-8 place-items-center rounded-md"
+    aria-label={copy.star}
+    aria-pressed={entry.starred}
+    title={copy.star}
+    onclick={() => logFailure(reader.toggleStar())}
+  >
+    <Star class="size-4 {entry.starred ? "fill-star text-star" : ""}" />
+  </button>
+  <button
+    type="button"
+    class="text-muted hover:bg-side hover:text-ink grid size-8 place-items-center rounded-md"
+    aria-label={shownRead ? copy.markUnread : copy.markRead}
+    title={shownRead ? copy.markUnread : copy.markRead}
+    onclick={() => logFailure(reader.toggleRead())}
+  >
+    {#if shownRead}
+      <Undo2 class="size-4" />
+    {:else}
+      <Check class="size-4" />
+    {/if}
+  </button>
+{/snippet}
+
+{#snippet footer(entry: Entry)}
+  <div class="hidden flex-wrap gap-2 text-xs md:flex">
+    {#if entry.url}
+      <a
+        class="border-line hover:bg-side flex items-center gap-1.5 rounded-lg border px-3 py-2"
+        href={entry.url}
+        target="_blank"
+        rel="noopener noreferrer"
+      >
+        <ExternalLink class="size-3.5" />
+        {copy.openOriginal}
+      </a>
+      <button
+        type="button"
+        class="border-line hover:bg-side flex items-center gap-1.5 rounded-lg border px-3 py-2"
+        onclick={share}
+      >
+        <Share class="size-3.5" />
+        {copied ? copy.copied : copy.share}
+      </button>
+    {/if}
+  </div>
+{/snippet}

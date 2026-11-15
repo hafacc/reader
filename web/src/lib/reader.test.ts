@@ -588,6 +588,27 @@ describe("reading", () => {
     await refreshing;
   });
 
+  test("an article's neighbors are ready before they are opened, and one shows at once", async () => {
+    const reader = makeReader([
+      article("a", { published: 3, summary: "Story a text" }),
+      article("b", { published: 2, summary: "Story b text" }),
+      article("c", { published: 1, summary: "Story c text" }),
+    ]);
+    await reader.open("b");
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(
+      Object.keys(reader.aheadBodies).toSorted((left, right) =>
+        left.localeCompare(right),
+      ),
+    ).toEqual(["a", "c"]);
+    expect(reader.aheadBodies["c"]).toContain("Story c text");
+    const opening = reader.open("c");
+    expect(reader.body).toContain("Story c text");
+    await opening;
+    await reader.close();
+    expect(reader.aheadBodies).toEqual({});
+  });
+
   test("stepping past either end closes the article", async () => {
     const reader = makeReader([
       article("a", { published: 2 }),
