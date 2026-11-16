@@ -23,6 +23,9 @@ object SyncConfig {
     /** The issues on GitHub, where feedback goes. */
     const val FEEDBACK_URL = "https://github.com/hafacc/reader/issues"
 
+    /** The source code on GitHub. */
+    const val SOURCE_URL = "https://github.com/hafacc/reader"
+
     /** The support address. */
     const val SUPPORT_EMAIL = "support@reader.hafa.cc"
 

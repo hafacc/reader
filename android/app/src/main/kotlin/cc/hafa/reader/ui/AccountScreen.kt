@@ -174,7 +174,7 @@ fun AccountAvatar(email: String, photoUrl: String, status: SyncStatus, large: Bo
     }
 }
 
-/** Sign-in and sync: signed out, waiting for the account choice, or signed in; with links to the privacy policy, terms, contact and feedback. */
+/** Sign-in and sync: signed out, waiting for the account choice, or signed in; with links to the privacy policy, terms, contact, feedback and the source code. */
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun AccountScreen(viewModel: ReaderViewModel) {
@@ -297,6 +297,7 @@ private fun Policies(onPage: (Detail) -> Unit) {
             R.string.terms to { onPage(Detail.Terms) },
             R.string.contact to { onPage(Detail.Contact) },
             R.string.feedback to { links.openUri(SyncConfig.FEEDBACK_URL) },
+            R.string.source to { links.openUri(SyncConfig.SOURCE_URL) },
         )
         for ((label, open) in pages) {
             TextButton(onClick = open, colors = ButtonDefaults.textButtonColors(contentColor = colors.muted)) {
