@@ -222,6 +222,8 @@ export const copy = {
   contactUs: "Contact us",
   /** Link to the issues on GitHub, for feedback. */
   feedback: "Feedback",
+  /** Link to the source code on GitHub. */
+  source: "Source code",
   /** The privacy policy's title in the app. */
   privacyTitle: "Privacy policy",
   /** The terms of service's title in the app. */
@@ -234,6 +236,10 @@ export const copy = {
   contactFeedback: "Found a bug or have an idea? Share feedback",
   /** The link to the issues on GitHub on the contact page. */
   contactFeedbackLink: "on GitHub",
+  /** The contact page's source code line, before its link. */
+  contactSource: "Reader is open source; read the",
+  /** The link to the source code on the contact page. */
+  contactSourceLink: "source code on GitHub",
   /** The contact page's line on deleting the account, before its link. */
   contactDelete: "To delete your account, use the",
   /** The link to the delete account page on the contact page. */

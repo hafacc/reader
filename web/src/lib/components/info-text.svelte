@@ -2,7 +2,7 @@
 A page's text as both its web page and the app show it: the privacy policy, the terms, or how to reach support.
 -->
 <script lang="ts">
-  import { feedbackUrl, supportEmail } from "#lib/config.ts";
+  import { feedbackUrl, sourceUrl, supportEmail } from "#lib/config.ts";
   import { copy } from "#lib/copy.ts";
   import type { InfoPage } from "#lib/types.ts";
   import privacy from "$policy/privacy.html?raw";
@@ -22,6 +22,10 @@ A page's text as both its web page and the app show it: the privacy policy, the 
   <p>
     {copy.contactFeedback}
     <a href={feedbackUrl}>{copy.contactFeedbackLink}</a>.
+  </p>
+  <p>
+    {copy.contactSource}
+    <a href={sourceUrl}>{copy.contactSourceLink}</a>.
   </p>
   <p>
     {copy.contactDelete}

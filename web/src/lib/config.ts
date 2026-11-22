@@ -17,6 +17,9 @@ export const siteUrl = "https://reader.hafa.cc";
 /** The issues on GitHub, where feedback goes. */
 export const feedbackUrl = "https://github.com/hafacc/reader/issues";
 
+/** The source code on GitHub. */
+export const sourceUrl = "https://github.com/hafacc/reader";
+
 /** The extension's Chrome Web Store listing page. */
 export const chromeWebStoreUrl =
   "https://chromewebstore.google.com/detail/ehmpednijaggcbpmjldkdookepbjindc";

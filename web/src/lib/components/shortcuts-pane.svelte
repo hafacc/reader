@@ -3,7 +3,7 @@
   import LogIn from "@lucide/svelte/icons/log-in";
   import LogOut from "@lucide/svelte/icons/log-out";
   import X from "@lucide/svelte/icons/x";
-  import { feedbackUrl } from "#lib/config.ts";
+  import { feedbackUrl, sourceUrl } from "#lib/config.ts";
   import { copy } from "#lib/copy.ts";
   import type { Reader } from "#lib/reader.svelte.ts";
   import { type Retention, retentionFromDays } from "#lib/sync/documents.ts";
@@ -237,6 +237,13 @@
             target="_blank"
             rel="noopener noreferrer"
             >{copy.feedback}</a
+          >
+          <a
+            class="hover:text-ink underline"
+            href={sourceUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            >{copy.source}</a
           >
         </p>
       </section>
