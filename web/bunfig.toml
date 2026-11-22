@@ -1,3 +1,7 @@
 [test]
 # a browser-like DOM, IndexedDB, and Svelte runes in .svelte.ts modules
 preload = ["./tests/setup.ts"]
+
+[install]
+# a version published less than a week ago is skipped; Dependabot waits the same week
+minimumReleaseAge = 604800
