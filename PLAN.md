@@ -481,7 +481,8 @@ decides). Web with the extension closed gets nothing until a device opens.
   been checked or 1 s has passed; while the account's data arrives, at opening
   when signed in and after signing in or replacing this device's data, until
   its feeds and settings have come from the server, the entry listener's first
-  changes are stored and the first pass has the last 90 days (sync offline,
+  changes from the server (not the device's own saved copy, whose read marks may
+  be out of date) are stored and the first pass has the last 90 days (sync offline,
   failing or waiting for a choice does not hold it); and after an import,
   until its feeds' first check is in. It is blank for its first 300 ms, so an
   instant load shows nothing, then shows the turning logo for at least 700 ms;
