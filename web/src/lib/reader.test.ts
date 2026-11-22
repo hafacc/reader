@@ -363,7 +363,9 @@ describe("loading", () => {
       ...emptyChange(),
       entries: [article("a", { feedId: "tech", read: true, updatedAt: 9 })],
     });
-    expect(reader.visible.map((entry) => entry.id)).toEqual(["a"]);
+    expect(reader.visible.map((entry) => [entry.id, entry.read])).toEqual([
+      ["a", true],
+    ]);
     reader.select({ kind: "starred" });
     reader.select({ kind: "all" });
     expect(reader.visible).toEqual([]);

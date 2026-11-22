@@ -39,7 +39,9 @@ private class FakeAccount : AccountStore {
     private var serverTime = 1_000L
     private val subscriptionListeners = mutableListOf<(Listing<SubscriptionDocument>) -> Unit>()
     private val settingsListeners = mutableListOf<(Listing<SettingsDocument>, AccountCopy?) -> Unit>()
-    private val entryListeners = mutableListOf<Pair<Long, (List<EntryChange>) -> Unit>>()
+    private val entryListeners = mutableListOf<Pair<Long, (List<EntryChange>, Boolean) -> Unit>>()
+    // Whether a new entry listener first hears only the device's cache, until [answerFromServer].
+    var cacheFirst = false
 
     override fun listenSubscriptions(
         reconciled: () -> Boolean,
@@ -64,12 +66,18 @@ private class FakeAccount : AccountStore {
 
     override suspend fun newestEntrySyncedAt(): Long = entries.values.maxOfOrNull { (_, syncedAt) -> syncedAt } ?: 0
 
-    override fun listenEntries(sinceMs: Long, onChanges: (List<EntryChange>) -> Unit, onError: (Throwable) -> Unit): Stop {
+    override fun listenEntries(sinceMs: Long, onChanges: (List<EntryChange>, Boolean) -> Unit, onError: (Throwable) -> Unit): Stop {
         val listener = sinceMs to onChanges
         entryListeners.add(listener)
         val changes = entries.filter { (_, value) -> value.second > sinceMs }.map { (id, value) -> EntryChange(id, value.first, value.second) }
-        onChanges(changes)
+        onChanges(changes, !cacheFirst)
         return Stop { entryListeners.remove(listener) }
+    }
+
+    /** The server answers the entry listeners, with what changed since they began. */
+    fun answerFromServer(changes: List<EntryChange> = emptyList()) {
+        cacheFirst = false
+        entryListeners.toList().forEach { (_, listener) -> listener(changes, true) }
     }
 
     override suspend fun readEntriesPage(after: PageCursor?, limit: Int): List<Pair<String, EntryDocument>> {
@@ -176,7 +184,7 @@ private class FakeAccount : AccountStore {
             settingsListeners.toList().forEach { listener -> listener(Listing(changedSettings, null), AccountCopy(account)) }
         }
         if (changedEntries.isNotEmpty()) {
-            entryListeners.toList().forEach { (_, listener) -> listener(changedEntries) }
+            entryListeners.toList().forEach { (_, listener) -> listener(changedEntries, true) }
         }
     }
 
@@ -184,7 +192,7 @@ private class FakeAccount : AccountStore {
     fun writeElsewhere(id: String, document: EntryDocument) {
         serverTime += 1
         entries[id] = document to serverTime
-        entryListeners.toList().forEach { (_, listener) -> listener(listOf(EntryChange(id, document, serverTime))) }
+        entryListeners.toList().forEach { (_, listener) -> listener(listOf(EntryChange(id, document, serverTime)), true) }
     }
 
     override suspend fun deleteEntriesOfFeed(feedId: String) {
@@ -346,6 +354,24 @@ class SyncEngineTest {
         assertTrue(entry.read)
         assertTrue(entry.starred)
         assertEquals(commits, alice.commits)
+    }
+
+    @Test
+    fun `the account is caught up only once its entries come from the server`() = runTest {
+        val model = reader()
+        val engine = engine(model)
+        model.addWithItems("https://a.example/feed", "one")
+        engine.signIn()
+        settle()
+        engine.signOut()
+        settle()
+        alice.cacheFirst = true
+        engine.signIn()
+        settle()
+        assertFalse(engine.ui.value.report.caughtUp)
+        alice.answerFromServer()
+        settle()
+        assertTrue(engine.ui.value.report.caughtUp)
     }
 
     @Test

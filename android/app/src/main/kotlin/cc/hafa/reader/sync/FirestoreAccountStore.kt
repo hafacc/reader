@@ -146,18 +146,23 @@ class FirestoreAccountStore(private val db: FirebaseFirestore, private val uid: 
         return newest.documents.firstOrNull()?.let(::syncedAt) ?: 0
     }
 
-    override fun listenEntries(sinceMs: Long, onChanges: (List<EntryChange>) -> Unit, onError: (Throwable) -> Unit): Stop {
-        // The first snapshot is passed on even when empty, so sync knows the listener has caught up.
+    override fun listenEntries(sinceMs: Long, onChanges: (List<EntryChange>, Boolean) -> Unit, onError: (Throwable) -> Unit): Stop {
+        // The first snapshot, and the first from the server, are passed on even when empty, so sync knows when the
+        // listener has caught up; the first can come from the cache, with marks the account has since changed.
         val heard = AtomicBoolean(false)
-        val registration = entries.whereGreaterThan("syncedAt", timestamp(sinceMs)).addSnapshotListener(snapshotExecutor) { snapshot, error ->
+        val heardServer = AtomicBoolean(false)
+        val query = entries.whereGreaterThan("syncedAt", timestamp(sinceMs))
+        val registration = query.addSnapshotListener(snapshotExecutor, MetadataChanges.INCLUDE) { snapshot, error ->
             if (error != null) {
                 onError(error)
             } else if (snapshot != null) {
                 val changes = snapshot.documentChanges
                     .filter { change -> change.type != DocumentChange.Type.REMOVED && !change.document.metadata.hasPendingWrites() }
                     .map { change -> EntryChange(change.document.id, parseEntry(change.document.data), syncedAt(change.document)) }
-                if (changes.isNotEmpty() || heard.compareAndSet(false, true)) {
-                    onChanges(changes)
+                val fromServer = !snapshot.metadata.isFromCache
+                val firstFromServer = fromServer && heardServer.compareAndSet(false, true)
+                if (changes.isNotEmpty() || heard.compareAndSet(false, true) || firstFromServer) {
+                    onChanges(changes, fromServer)
                 }
             }
         }

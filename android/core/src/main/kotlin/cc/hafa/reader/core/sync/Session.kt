@@ -120,7 +120,7 @@ class Session(
     var feedsKnown = false
         private set
 
-    // Whether the account's settings from the server, the entry listener's first changes, and the recent window of entries are stored here.
+    // Whether the account's settings from the server, the entry listener's first changes from the server, and the recent window of entries are stored here.
     @Volatile
     private var settingsIn = false
 
@@ -132,7 +132,7 @@ class Session(
 
     /**
      * Whether what the account had when this session began is stored here: its
-     * feeds and settings from the server, the entry listener's first changes,
+     * feeds and settings from the server, the entry listener's first changes from the server,
      * and the recent window of entries; older ones may still be loading.
      */
     val caughtUp: Boolean get() = feedsKnown && settingsIn && entriesIn && (recentIn || state.merged)
@@ -542,12 +542,12 @@ class Session(
                 try {
                     val since = entriesStart()
                     if (!cancelled.get()) {
-                        listener.set(store.listenEntries(since, { changes ->
+                        listener.set(store.listenEntries(since, { changes, fromServer ->
                             heard("entries")
                             serially {
                                 try {
                                     onEntries(changes)
-                                    if (!entriesIn) {
+                                    if (!entriesIn && fromServer) {
                                         entriesIn = true
                                         onStatus()
                                     }
