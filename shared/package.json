@@ -17,7 +17,7 @@
     "fmt": "biome check --write"
   },
   "dependencies": {
-    "fast-xml-parser": "^5.2.0"
+    "fast-xml-parser": "^5.12.1"
   },
   "devDependencies": {
     "@biomejs/biome": "2.6.4",
