@@ -18,7 +18,7 @@ room = "2.8.5"
 work = "2.12.0"
 coil = "3.6.3"
 junit4 = "4.13.2"
-playPublisher = "4.1.1"
+playPublisher = "4.1.2"
 
 [libraries]
 firebase-bom = { group = "com.google.firebase", name = "firebase-bom", version.ref = "firebaseBom" }
