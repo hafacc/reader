@@ -90,7 +90,7 @@ class ReaderModelTest {
         model.settle()
         val entry = model.state.value.entries.single()
         model.syncHost.apply(RemoteChange(entries = listOf(entry.copy(read = true, updatedAt = now))))
-        assertEquals(listOf("one"), model.titles())
+        assertEquals(listOf("one" to true), model.view().visible.map { listed -> listed.title to listed.read })
         model.select(Selection.Starred)
         model.select(Selection.All)
         assertEquals(emptyList(), model.titles())

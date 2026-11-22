@@ -306,7 +306,7 @@ class Session {
   loadingOlder = false;
   /** Whether the account's settings from the server are stored here. */
   private settingsIn: boolean;
-  /** Whether the entry listener's first snapshot is stored here. */
+  /** Whether the entry listener's first snapshot from the server is stored here. */
   private entriesIn: boolean;
   /** Whether the first pass has stored the recent window of entries. */
   private recentIn: boolean;
@@ -346,7 +346,8 @@ class Session {
 
   /**
    * Whether what the account had when this session began is stored here: its
-   * feeds and settings from the server, the entry listener's first snapshot,
+   * feeds and settings from the server, the entry listener's first snapshot
+   * from the server,
    * and the recent window of entries; older ones may still be loading.
    */
   get caughtUp(): boolean {
@@ -896,15 +897,13 @@ class Session {
     );
     return onSnapshot(
       changes,
+      // the first snapshot can come from this device's cache, with marks the account has since changed
+      { includeMetadataChanges: true },
       (snapshot) => {
         this.heard("entries");
         this.serially(async () => {
           try {
             await this.onEntries(snapshot);
-            if (!this.entriesIn) {
-              this.entriesIn = true;
-              this.onStatus();
-            }
           } catch (error) {
             if (!this.cursorHeld) {
               this.cursorHeld = true;
@@ -938,6 +937,10 @@ class Session {
     if (newest > this.state.cursor && !this.cursorHeld) {
       this.state.cursor = newest;
       this.saveState();
+    }
+    if (!(this.entriesIn || snapshot.metadata.fromCache)) {
+      this.entriesIn = true;
+      this.onStatus();
     }
   }
 
