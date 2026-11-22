@@ -73,6 +73,11 @@ fun ContactScreen(viewModel: ReaderViewModel) {
                 PolicyRun(stringResource(R.string.contact_feedback_link), SyncConfig.FEEDBACK_URL),
                 PolicyRun("."),
             )
+            val source = listOf(
+                PolicyRun("${stringResource(R.string.contact_source)} "),
+                PolicyRun(stringResource(R.string.contact_source_link), SyncConfig.SOURCE_URL),
+                PolicyRun("."),
+            )
             val elsewhere = listOf(
                 PolicyRun("${stringResource(R.string.contact_delete)} "),
                 PolicyRun(stringResource(R.string.contact_delete_link), "$SITE_URL/delete"),
@@ -80,7 +85,7 @@ fun ContactScreen(viewModel: ReaderViewModel) {
                 PolicyRun(stringResource(R.string.contact_privacy_link), "$SITE_URL/privacy"),
                 PolicyRun("."),
             )
-            for (runs in listOf(feedback, elsewhere)) {
+            for (runs in listOf(feedback, source, elsewhere)) {
                 Text(linked(runs, open), fontSize = 16.sp, lineHeight = 24.sp, color = colors.text)
             }
         }

@@ -1,5 +1,6 @@
 <script lang="ts">
   import CircleAlert from "@lucide/svelte/icons/circle-alert";
+  import CodeXml from "@lucide/svelte/icons/code-xml";
   import Folder from "@lucide/svelte/icons/folder";
   import Inbox from "@lucide/svelte/icons/inbox";
   import Mail from "@lucide/svelte/icons/mail";
@@ -8,7 +9,7 @@
   import PanelLeftOpen from "@lucide/svelte/icons/panel-left-open";
   import Plus from "@lucide/svelte/icons/plus";
   import Star from "@lucide/svelte/icons/star";
-  import { feedbackUrl } from "#lib/config.ts";
+  import { feedbackUrl, sourceUrl } from "#lib/config.ts";
   import { copy } from "#lib/copy.ts";
   import {
     type FeedRow,
@@ -272,6 +273,19 @@
       ><MessageSquare class="size-[18px]" /></span
     >
     <span class="truncate {fade}">{copy.feedback}</span>
+  </a>
+
+  <a
+    href={sourceUrl}
+    target="_blank"
+    rel="noopener noreferrer"
+    class="text-muted hover:bg-panel flex h-9 shrink-0 items-center gap-2.5 rounded-lg px-2.5 text-sm whitespace-nowrap"
+    title={copy.source}
+  >
+    <span class="flex size-5 shrink-0 items-center justify-center"
+      ><CodeXml class="size-[18px]" /></span
+    >
+    <span class="truncate {fade}">{copy.source}</span>
   </a>
 
   <button

@@ -17,6 +17,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.Message
 import androidx.compose.material.icons.outlined.Add
+import androidx.compose.material.icons.outlined.Code
 import androidx.compose.material.icons.outlined.ErrorOutline
 import androidx.compose.material.icons.outlined.Folder
 import androidx.compose.material.icons.outlined.Inbox
@@ -78,6 +79,16 @@ fun Sidebar(snapshot: Snapshot, viewModel: ReaderViewModel, onPicked: () -> Unit
             icon = { tint -> Icon(Icons.AutoMirrored.Outlined.Message, null, tint = tint) },
             onClick = {
                 links.openUri(SyncConfig.FEEDBACK_URL)
+                onPicked()
+            },
+        )
+        SidebarItem(
+            label = stringResource(R.string.source),
+            count = 0,
+            selected = false,
+            icon = { tint -> Icon(Icons.Outlined.Code, null, tint = tint) },
+            onClick = {
+                links.openUri(SyncConfig.SOURCE_URL)
                 onPicked()
             },
         )
