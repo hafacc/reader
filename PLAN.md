@@ -498,7 +498,9 @@ decides). Web with the extension closed gets nothing until a device opens.
   sidebar when unread only is switched or such a refresh ends. A feed the
   sidebar does not list (nothing unread under unread only) stays out when its
   articles arrive, and an article read on another device stays listed until
-  the view changes, as one read here does. A list or sidebar that shows
+  the view changes, as one read here does; read articles go when the loading
+  screen lets the person in and when a refresh ends, before the list is seen
+  again. A list or sidebar that shows
   nothing takes in what arrives, since no row can move; a feed the person adds
   shows at once. Unread counts still change as marks and articles arrive.
 - **Refresh dot:** a small accent dot on the sidebar logo and on the logo in the

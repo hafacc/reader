@@ -97,6 +97,17 @@ class ReaderModelTest {
     }
 
     @Test
+    fun `an article read elsewhere while the loading screen is up is not listed`() = runTest {
+        val model = model()
+        model.addWithItems("https://a.example/feed", "one")
+        model.select(Selection.All)
+        val entry = model.state.value.entries.single()
+        model.syncHost.apply(RemoteChange(entries = listOf(entry.copy(read = true, updatedAt = now))))
+        model.letIn()
+        assertEquals(emptyList(), model.titles())
+    }
+
+    @Test
     fun `a feed with nothing unread stays out of the sidebar when articles arrive`() = runTest {
         val model = model()
         model.addWithItems("https://a.example/feed", "one")
@@ -371,6 +382,25 @@ class ReaderModelTest {
         fetcher.answers["https://a.example/feed"] = FetchOutcome(status = 200, text = rss("A", "one", "two"))
         model.refresh()
         assertEquals(2.0, model.state.value.feeds.first().schedule.model.pattern!!.hourOfDay.sum(), 1e-9)
+    }
+
+    @Test
+    fun `an article read elsewhere during a refresh goes when it ends`() = runTest {
+        val model = model()
+        model.addWithItems("https://a.example/feed", "one")
+        model.select(Selection.All)
+        model.settle()
+        fetcher.answers["https://a.example/feed"] = FetchOutcome(status = 304)
+        val gate = CompletableDeferred<Unit>()
+        fetcher.gate = gate
+        val refreshing = launch { model.refresh() }
+        runCurrent()
+        val entry = model.state.value.entries.single()
+        model.syncHost.apply(RemoteChange(entries = listOf(entry.copy(read = true, updatedAt = now))))
+        assertEquals(listOf("one"), model.titles())
+        gate.complete(Unit)
+        refreshing.join()
+        assertEquals(emptyList(), model.titles())
     }
 
     @Test
