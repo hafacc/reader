@@ -327,6 +327,16 @@ describe("loading", () => {
     expect(reader.loadingBusy).toBe(false);
   });
 
+  test("the account holds the person without the extension too", () => {
+    const reader = makeReader([]);
+    reader.checked = true;
+    reader.sync.email = "reader@example.com";
+    reader.sync.status = "synced";
+    expect(reader.loadingBusy).toBe(true);
+    reader.sync.caughtUp = true;
+    expect(reader.loadingBusy).toBe(false);
+  });
+
   test("an import holds the person until its feeds' first check", () => {
     const reader = started([]);
     reader.importing = 1;

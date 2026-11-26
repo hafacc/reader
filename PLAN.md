@@ -478,8 +478,8 @@ decides). Web with the extension closed gets nothing until a device opens.
   leaves the app from the list on Android): at opening, while stored data is
   read (and, on the web, the extension is found and what it fetched while the
   app was closed is taken in), and until the feeds past their due time have
-  been checked or 1 s has passed; while the account's data arrives, at opening
-  when signed in and after signing in or replacing this device's data, until
+  been checked or 1 s has passed; while the account's data arrives, with or
+  without the extension, at opening when signed in and after signing in or replacing this device's data, until
   its feeds and settings have come from the server, the entry listener's first
   changes from the server (not the device's own saved copy, whose read marks may
   be out of date) are stored and the first pass has the last 90 days (sync offline,
