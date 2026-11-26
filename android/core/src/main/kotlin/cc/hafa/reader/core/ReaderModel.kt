@@ -433,6 +433,14 @@ class ReaderModel(
         update { current -> current.settled() }
     }
 
+    /**
+     * Settle the lists as the loading screen lets the person in, dropping
+     * read articles: ones read elsewhere while it was up were never seen.
+     */
+    fun letIn() {
+        update { current -> current.settled().copy(pinned = emptySet()) }
+    }
+
     /** This state with everything that has arrived let into the lists and the sidebar's order worked out again. */
     private fun ReaderState.settled(): ReaderState = copy(
         frozenRank = frozenRankOf(feeds, entries, settings),
@@ -828,8 +836,8 @@ class ReaderModel(
      * Requests are still conditional, so unchanged feeds cost little. Read
      * articles kept in the list go at once; then the list holds still (see
      * [ReaderState.frozenList]) until the last refresh under way ends, when
-     * the lists take in everything that arrived, the sidebar order is worked
-     * out again and the list goes back to its top.
+     * the lists take in everything that arrived and drop read articles, the
+     * sidebar order is worked out again and the list goes back to its top.
      */
     suspend fun refresh(feedIds: List<String> = emptyList()) {
         load()
@@ -863,6 +871,8 @@ class ReaderModel(
                     } else {
                         current.settled().copy(
                             refreshCount = 0,
+                            // the list goes back to its top, so read articles go with what it held
+                            pinned = emptySet(),
                             frozenList = null,
                             refreshesEnded = current.refreshesEnded + 1,
                         )
