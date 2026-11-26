@@ -555,14 +555,13 @@ export class Reader {
    * Whether something that can still change the lists is loading: the stored
    * data, the extension and what it found while the app was closed, the
    * first check of imported feeds, or, while the person waits for it (see
-   * `Sync.awaited`), the account's data.
+   * `Sync.awaited`), the account's data, with or without the extension.
    */
   loadingBusy = $derived(
-    !this.checked ||
+    !(this.checked && this.loaded) ||
       (this.extension.version !== "" &&
-        (!(this.loaded && this.connected) ||
-          this.importing > 0 ||
-          (this.sync.awaited && this.accountArriving()))),
+        (!this.connected || this.importing > 0)) ||
+      (this.sync.awaited && this.accountArriving()),
   );
 
   /** Whether the loading screen holds the person: nothing behind it takes taps or keys. */
