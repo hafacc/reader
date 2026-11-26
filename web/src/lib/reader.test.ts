@@ -371,6 +371,16 @@ describe("loading", () => {
     expect(reader.visible).toEqual([]);
   });
 
+  test("an article read elsewhere while the loading screen is up is not listed", async () => {
+    const reader = started([article("a", { feedId: "tech" })]);
+    await reader["applyRemote"]({
+      ...emptyChange(),
+      entries: [article("a", { feedId: "tech", read: true, updatedAt: 9 })],
+    });
+    reader.updateGate(false, reader.gate.busySince ?? 0);
+    expect(reader.visible).toEqual([]);
+  });
+
   test("a feed with nothing unread stays out of the sidebar when articles arrive", async () => {
     const reader = started([article("a", { feedId: "tech" })]);
     reader.settle();
@@ -410,6 +420,29 @@ describe("loading", () => {
     await refreshing;
     expect(reader.visible.map((entry) => entry.id)).toEqual(["b"]);
     expect(reader.refreshesEnded).toBe(1);
+  });
+
+  test("an article read elsewhere during a refresh goes when it ends", async () => {
+    const reader = started([article("a", { feedId: "tech" })]);
+    reader.settle();
+    let finish: () => void = () => undefined;
+    reader.extension.send = (
+      request,
+    ): Promise<ExtensionResponse | undefined> =>
+      request.type === "refresh"
+        ? new Promise((resolve) => {
+            finish = (): void => resolve({ type: "refreshed" });
+          })
+        : Promise.resolve(undefined);
+    const refreshing = reader.refresh();
+    await reader["applyRemote"]({
+      ...emptyChange(),
+      entries: [article("a", { feedId: "tech", read: true, updatedAt: 9 })],
+    });
+    expect(reader.visible.map((entry) => entry.id)).toEqual(["a"]);
+    finish();
+    await refreshing;
+    expect(reader.visible).toEqual([]);
   });
 
   test("an empty list stays empty while a refresh runs", async () => {

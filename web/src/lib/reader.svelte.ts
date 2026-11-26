@@ -933,8 +933,9 @@ export class Reader {
   /**
    * Bring the loading screen up to date with whether something that can
    * still change the lists is loading (`busy`); it runs again on its own
-   * timer while it waits. Letting the person in settles the lists and stops
-   * the account's data from holding them again until they next sign in.
+   * timer while it waits. Letting the person in settles the lists, drops
+   * read articles from them, and stops the account's data from holding them
+   * again until they next sign in.
    */
   updateGate(busy: boolean = this.loadingBusy, now = Date.now()): void {
     const before = this.gate;
@@ -955,6 +956,8 @@ export class Reader {
         : setTimeout(() => this.updateGate(), Math.max(0, wake - Date.now()));
     if (before.phase !== "open" && next.phase === "open") {
       this.sync.awaited = false;
+      // marks read elsewhere while the screen was up were never seen, so they leave with the rest
+      this.pinned = {};
       this.settle();
     }
   }
@@ -1348,7 +1351,7 @@ export class Reader {
    * Requests are still conditional, so unchanged feeds cost little. Read
    * articles kept in the list go as it starts; then the list holds still
    * (see `frozenList`) until the last refresh under way ends, when it takes
-   * in everything that arrived and goes back to its top.
+   * in everything that arrived, drops read articles and goes back to its top.
    */
   async refresh(feedIds: string[] = []): Promise<void> {
     if (this.extension.version) {
@@ -1381,6 +1384,7 @@ export class Reader {
         this.refreshing = this.refreshCount > 0;
         if (!this.refreshing) {
           this.frozenList = undefined;
+          this.pinned = {};
           this.settle();
           this.refreshesEnded += 1;
         }

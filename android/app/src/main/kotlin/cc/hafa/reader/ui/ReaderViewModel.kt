@@ -221,8 +221,9 @@ class ReaderViewModel(application: Application) : AndroidViewModel(application) 
     /**
      * Move the loading screen on, with [busy] saying whether something that
      * can still change the lists is loading; when it next changes on its own,
-     * or null. Letting the person in settles the lists and stops the
-     * account's data from holding them again until they next sign in.
+     * or null. Letting the person in settles the lists, drops read articles
+     * from them, and stops the account's data from holding them again until
+     * they next sign in.
      */
     private fun stepGate(busy: Boolean): Long? {
         val before = mutableGate.value
@@ -230,7 +231,7 @@ class ReaderViewModel(application: Application) : AndroidViewModel(application) 
         mutableGate.value = next
         if (before.blocks && !next.blocks) {
             accountAwaited.value = false
-            model.settle()
+            model.letIn()
         }
         return next.wakeAt()
     }
